@@ -3,14 +3,17 @@
 Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
 
 ## 🔧 CURRENT DEBUGGING STATE (speaker wiring)
-- **SOLVED (mostly):** LRC path — after replacing the wire / moving pins (user to confirm
-  which), the chime's tone changes became audible = BCLK/LRC/DIN all decoding correctly.
-- Remaining "raspy/fuzzy" sound had 3 suspects: ① the sketches' crude 16-step sine
-  (genuinely buzzy by design — **all 3 sketches upgraded to a clean 256-step sine**,
-  SayHelp default volume lowered 18→13) ② clipping at high volume (send `-`, target
-  ~10–13) ③ the unsoldered speaker twist-joint (pinch test → then solder).
-- The "Help!" VOICE is a real recording — unaffected by ① — so it is the true test
-  of clean wiring. Play it after the chime sounds clean.
+- LRC path FIXED (tone changes audible = BCLK/LRC/DIN all decoding). Which fix worked
+  (fresh wire vs GPIO33) — still to be confirmed by user.
+- Constant raspy/garbled sound **unchanged by the 256-step sine upgrade** → garble is
+  PHYSICAL (marginal joint), not code. Suspect #1: amp header pins (possibly unsoldered
+  from factory, like their AD8232 was).
+- **NOW: user re-soldered the driver board — NO CHANGE.** Suspects remaining:
+  ① speaker itself (battery pop test: wires on a 1.5V AA, clean pop = OK)
+  ② amp clipping (volume `-`×5 test; fix = volume ≤8 or GAIN→VIN = 0dB)
+  ③ dud amp clone (if ① ② pass → replace board)
+- **All 3 sketches now use APLL (precision audio clock) with auto-fallback** —
+  re-upload needed to test that path.
 - Older context: garble with LRC dangling + all 6 Wire Doctor mappings failing →
   buzz splitter test isolated the fault to the LRC path (power/amp/speaker/BCLK/DIN
   were all confirmed good).

@@ -75,7 +75,7 @@ int volume = 10;                  // 0..21 — starts at half, safe for a small 
       .intr_alloc_flags = 0,
       .dma_buf_count = 8,
       .dma_buf_len = 64,
-      .use_apll = false,
+      .use_apll = true,     // precision audio clock = less rasp (auto-fallback below)
       .tx_desc_auto_clear = true
     };
     i2s_pin_config_t pins = {
@@ -85,7 +85,10 @@ int volume = 10;                  // 0..21 — starts at half, safe for a small 
       .data_out_num = PIN_DIN,
       .data_in_num = I2S_PIN_NO_CHANGE
     };
-    i2s_driver_install(I2S_NUM_0, &cfg, 0, NULL);
+    if (i2s_driver_install(I2S_NUM_0, &cfg, 0, NULL) != ESP_OK) {
+      cfg.use_apll = false;                    // this core can't do APLL -> plain clock
+      i2s_driver_install(I2S_NUM_0, &cfg, 0, NULL);
+    }
     i2s_set_pin(I2S_NUM_0, &pins);
   }
 
@@ -95,9 +98,6 @@ int volume = 10;                  // 0..21 — starts at half, safe for a small 
   }
 #endif
 
-// ----------------------------------------------------------------------
-// Tiny synthesizer: one 16-entry sine table + a phase accumulator
-// ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 // Clean 256-step sine wave (the old 16-step version sounded raspy even
 // with perfect wiring — this one sounds like a real instrument)

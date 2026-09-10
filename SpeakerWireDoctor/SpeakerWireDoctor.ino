@@ -88,7 +88,7 @@ bool i2sReady = false;
       .intr_alloc_flags = 0,
       .dma_buf_count = 8,
       .dma_buf_len = 64,
-      .use_apll = false,
+      .use_apll = true,     // precision audio clock = less rasp (auto-fallback below)
       .tx_desc_auto_clear = true
     };
     i2s_pin_config_t pins = {
@@ -98,7 +98,10 @@ bool i2sReady = false;
       .data_out_num = din,
       .data_in_num = I2S_PIN_NO_CHANGE
     };
-    i2s_driver_install(I2S_NUM_0, &cfg, 0, NULL);
+    if (i2s_driver_install(I2S_NUM_0, &cfg, 0, NULL) != ESP_OK) {
+      cfg.use_apll = false;                    // this core can't do APLL -> plain clock
+      i2s_driver_install(I2S_NUM_0, &cfg, 0, NULL);
+    }
     i2s_set_pin(I2S_NUM_0, &pins);
     i2sReady = true;
   }
