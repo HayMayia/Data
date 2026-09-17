@@ -23,13 +23,13 @@ Standard library only.
 import wave, struct, os, sys, math
 
 IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
-OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
+OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_voice_v7.h")
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
 STRETCH = 1.75     # gentle stretch on top of the natively-slow TTS take (Heeeelp!)
 
-GAIN_DB = 14.0     # loudness makeup gain before the soft limiter
-KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression
+GAIN_DB = 16.0     # loudness makeup gain before the soft limiter
+KNEE    = 0.32     # soft-knee threshold (0..1) — lower = more compression
 
 # ----------------------------------------------------------------------
 def highpass(xs, f0, fs, Q=0.707):
@@ -160,6 +160,7 @@ def main():
                 % (sr, len(out), len(out)/sr))
         f.write("// Regenerate: python3 make_help_header.py  (after replacing audio/help.wav)\n")
         f.write("#pragma once\n#include <Arduino.h>\n\n")
+        f.write('#define HELP_VOICE_VERSION "v7 - 2.81s - LOUD (Heeeelp! Heeeeelp, pleeeeease!)"\n\n')
         f.write("static const uint32_t HELP_SAMPLE_RATE = %d;\n" % sr)
         f.write("static const uint32_t HELP_NUM_SAMPLES = %d;\n" % len(out))
         f.write("static const int16_t HELP_PCM[] = {\n")

@@ -34,7 +34,9 @@
  *   to the chat and I'll convert it for you.
  */
 
-#include "help_sound.h"     // the embedded "Help!" audio (24000 Hz mono PCM)
+#include "help_voice_v7.h"   // v7 — NEW FILENAME (old help_sound.h is retired.
+                             // If this file is missing the compile FAILS on purpose —
+                             // that means the sketch folder isn't the one you think.)
 
 // ---------------- WIRING CONFIG ----------------
 // Defaults = standard wiring. If SpeakerWireDoctor found a different
@@ -223,6 +225,8 @@ void setup() {
   delay(800);
   Serial.println();
   Serial.println("VocalBridge — SPEAKER SAYS 'HELP!' (MAX98357A, voice on-chip)");
+  Serial.print("VOICE FILE: ");
+  Serial.println(HELP_VOICE_VERSION);   // <- proves which voice is compiled in
   Serial.println("--------------------------------------------------------------");
   i2sInit();
   buildSine();
