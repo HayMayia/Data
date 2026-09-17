@@ -1,37 +1,40 @@
 #!/usr/bin/env python3
 """
-VocalBridge — regenerate help_sound.h from a WAV recording  (LOUD + CRISP edition)
---------------------------------------------------------------------------------
-Use this to put YOUR OWN voice (or a family member's) into the ESP32.
+VocalBridge — regenerate help_sound.h from a WAV recording  (LOUD v2 + CRISP + SLOWER)
+--------------------------------------------------------------------------------------
+Use this to put ANY voice into the ESP32 (record "Help!", save as audio/help.wav, run this).
 
-How:
-  1. Record "Help!" (mono, any WAV — phone voice recorder then convert to WAV)
-  2. Save/replace it as:  audio/help.wav        (next to this script's folder)
-  3. Run:                 python3 make_help_header.py
-  4. Re-upload the SpeakerSayHelp_MAX98357A sketch — new voice is in.
+Processing chain (in order):
+  1. silence trim
+  2. TIME-STRETCH 1.12x  -> ~12% slower, pitch preserved (WSOLA-style, pure python)
+  3. high-pass 170 Hz    -> removes bass the small speaker can't play (less mud)
+  4. presence +4.5 dB @ 2.6 kHz -> crisper consonants
+  5. LOUDNESS v2: +14 dB gain with deep soft-knee compression + tanh saturation
+     -> much louder, punchy, no hard clipping
+  6. normalize to 99%
 
-What it does (in order):
-  - trims silence at both ends
-  - high-pass 170 Hz   -> removes bass the small speaker can't play (less mud)
-  - presence boost     -> +4.5 dB around 2.6 kHz = crisper consonants
-  - loudness stage     -> +5.5 dB gain with soft limiter = louder, no hard clipping
-  - normalize to 99%   -> uses the full digital range
-  - writes SpeakerSayHelp_MAX98357A/help_sound.h
+Writes:
+  SpeakerSayHelp_MAX98357A/help_sound.h   (upload this into the sketch)
+  audio/help_enhanced.wav                 (preview — exactly what the device says)
 
-Pure standard library — no numpy/scipy needed.
+Standard library only.
 """
 
 import wave, struct, os, sys, math
 
-IN_WAV   = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
-OUT_HDR  = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
-PREVIEW  = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
-PAD_SEC  = 0.12
+IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
+OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
+PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
+PAD_SEC = 0.12
+STRETCH = 1.12     # 1.0 = original speed, 1.12 = 12% slower
+GAIN_DB = 14.0     # loudness makeup gain before the soft limiter
+KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression
 
+# ----------------------------------------------------------------------
 def highpass(xs, f0, fs, Q=0.707):
     w0 = 2*math.pi*f0/fs; a = math.sin(w0)/(2*Q); c = math.cos(w0)
-    b0,b1,b2 = (1+c)/2, -(1+c), (1+c)/2
-    a0,a1,a2 = 1+a, -2*c, 1-a
+    b0, b1, b2 = (1+c)/2, -(1+c), (1+c)/2
+    a0, a1, a2 = 1+a, -2*c, 1-a
     x1=x2=y1=y2=0; out=[]
     for x in xs:
         y = (b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2)/a0
@@ -53,10 +56,48 @@ def highshelf(xs, f0, fs, gain_db, Q=0.9):
         out.append(y); x2,x1,y2,y1 = x1,x,y1,y
     return out
 
+def time_stretch(xs, ratio, fs, grain_ms=22.0, search_ms=6.0):
+    """WSOLA-style overlap-add. ratio>1 = longer/slower, pitch preserved."""
+    if abs(ratio - 1.0) < 0.001:
+        return xs[:]
+    N  = int(grain_ms * fs / 1000)
+    Ha = N // 2
+    Hs = int(round(Ha * ratio))
+    S  = int(search_ms * fs / 1000)
+    win = [0.5 - 0.5*math.cos(2*math.pi*i/N) for i in range(N)]
+    out_len = int(len(xs)*ratio) + 2*N
+    out  = [0.0]*out_len
+    wsum = [0.0]*out_len
+    n_grains = max(0, (len(xs) - N)//Ha)
+    synth = 0
+    for g in range(n_grains):
+        ideal = g*Ha
+        if g == 0:
+            ana = ideal
+        else:
+            best, bestscore = ideal, -1e30
+            lo, hi = max(0, ideal-S), min(len(xs)-N, ideal+S)
+            for cand in range(lo, hi, 2):
+                sc = 0.0
+                for k in range(0, N//2, 8):
+                    sc += xs[cand+k]*out[synth+k]
+                if sc > bestscore:
+                    bestscore, best = sc, cand
+            ana = best
+        for i in range(N):
+            out[synth+i]  += xs[ana+i]*win[i]
+            wsum[synth+i] += win[i]
+        synth += Hs
+    res = [ (out[i]/wsum[i]) if wsum[i] > 0.01 else 0.0 for i in range(out_len) ]
+    # trim trailing silence introduced by the stretch
+    while res and abs(res[-1]) < 1e-4: res.pop()
+    return res
+
 def rms_db(xs):
     r = math.sqrt(sum(x*x for x in xs)/len(xs))
     return 20*math.log10(r/32768) if xs else -99
 
+# ----------------------------------------------------------------------
 def main():
     if not os.path.exists(IN_WAV):
         sys.exit("ERROR: %s not found — record 'Help!' and save it there." % IN_WAV)
@@ -74,7 +115,7 @@ def main():
 
     before = rms_db(samples)
 
-    # trim silence
+    # 1) trim silence
     peak = max(map(abs, samples)) or 1
     thr = peak*0.03
     first = next((i for i,s in enumerate(samples) if abs(s) > thr), 0)
@@ -83,24 +124,32 @@ def main():
     pad = int(PAD_SEC*sr)
     xs = [s/32768.0 for s in samples[max(0,first-pad):min(len(samples), last+pad)]]
 
-    # clarity + loudness chain
+    # 2) slower (pitch preserved)
+    xs = time_stretch(xs, STRETCH, sr)
+
+    # 3) clarity
     xs = highpass(xs, 170.0, sr)
     xs = highshelf(xs, 2600.0, sr, +4.5)
-    g = 10**(5.5/20)
+
+    # 4) loudness v2: strong gain + deep soft-knee compression + tanh saturation
+    g = 10**(GAIN_DB/20)
     lim = []
     for x in xs:
         x *= g
         a = abs(x)
-        if a > 0.75:
-            a = 0.75 + 0.25*math.tanh((a-0.75)/0.25)
+        if a > KNEE:
+            a = KNEE + (1-KNEE)*math.tanh((a-KNEE)/(1-KNEE))
         lim.append(math.copysign(a, x))
+
+    # 5) normalize to 99%
     pk = max(map(abs, lim)) or 1
     out = [max(-32767, min(32767, int(x/pk*0.99*32767))) for x in lim]
 
     after = rms_db(out)
 
     with open(OUT_HDR, "w") as f:
-        f.write("// VocalBridge — 'Help!' voice (LOUD+CRISP), from audio/help.wav\n")
+        f.write("// VocalBridge — 'Help!' voice (LOUD v2 + CRISP + %d%% slower), from audio/help.wav\n"
+                % round((STRETCH-1)*100))
         f.write("// %d Hz, mono, 16-bit PCM, %d samples (%.2f s). Do not edit by hand.\n"
                 % (sr, len(out), len(out)/sr))
         f.write("// Regenerate: python3 make_help_header.py  (after replacing audio/help.wav)\n")
@@ -116,9 +165,9 @@ def main():
     pv = wave.open(PREVIEW, "wb"); pv.setnchannels(1); pv.setsampwidth(2); pv.setframerate(sr)
     pv.writeframes(struct.pack("<%dh" % len(out), *out)); pv.close()
 
-    print("OK: %d samples @ %d Hz (%.2f s)" % (len(out), sr, len(out)/sr))
-    print("loudness: %.1f -> %.1f dBFS  (+%.1f dB)" % (before, after, after-before))
-    print("preview (play on PC to hear it): %s" % PREVIEW)
+    print("OK: %d samples @ %d Hz (%.2f s, %.0f%% slower)" % (len(out), sr, len(out)/sr, (STRETCH-1)*100))
+    print("loudness: %.1f -> %.1f dBFS  (%+.1f dB)" % (before, after, after-before))
+    print("preview: %s" % PREVIEW)
     print("Now re-upload the SpeakerSayHelp_MAX98357A sketch.")
 
 if __name__ == "__main__":
