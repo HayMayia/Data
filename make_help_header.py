@@ -26,7 +26,7 @@ IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
 OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
-STRETCH = 3.0      # 1.0 = original speed. 3.0 = one-third speed (user request).
+STRETCH = 1.75     # gentle stretch on top of the natively-slow TTS take (Heeeelp!)
 
 GAIN_DB = 14.0     # loudness makeup gain before the soft limiter
 KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression

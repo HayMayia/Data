@@ -26,11 +26,11 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   buzz splitter test isolated the fault to the LRC path (power/amp/speaker/BCLK/DIN
   were all confirmed good).
 - When GPIO33 is taken by LRC, the muscle sensor's LO− moves to GPIO35 later.
-- **Audio v5 (mid-Sep):** user said v4 "still very very fast" → STRETCH 2.3→3.0
-  (2.64 s, 63,338 samples, RMS −10.9 dBFS). ⚠️ Clarified to user: speed is baked into
-  help_sound.h, NOT a sketch setting — if device still sounds fast after this, the old
-  header is still in the sketch folder (verify: open help_sound.h in Notepad, check
-  the duration on line 2; delete old copies; re-upload).
+- **Audio v5→v6 (mid-Sep):** v5 (STRETCH 3.0) reached the wanted slowness (2.64 s) but
+  CACKLED — 3× exceeds the simple WSOLA's clean range. v6 fix: regenerate the take
+  natively slow via elongated spellings ("Heeeelp! Heeeeelp, pleeeeease!", voice-02,
+  1.49 s speech) + gentle 1.75× stretch → 2.81 s, RMS −8.1 dBFS, artifact delta +0.28%
+  (clean). LESSON: keep stretch ≤ ~2×; make the source itself slow instead. v6 = current.
 - **Status (mid-Sep):** audio system DONE (loud+crisp "Help!" confirmed). Exams nearly
   over (only Computers left). Next session: fresh pads → v13 (clench → "Help!") → film.
 
