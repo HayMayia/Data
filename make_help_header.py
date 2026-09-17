@@ -1,26 +1,61 @@
 #!/usr/bin/env python3
 """
-VocalBridge — regenerate help_sound.h from a WAV recording
-----------------------------------------------------------
+VocalBridge — regenerate help_sound.h from a WAV recording  (LOUD + CRISP edition)
+--------------------------------------------------------------------------------
 Use this to put YOUR OWN voice (or a family member's) into the ESP32.
 
 How:
   1. Record "Help!" (mono, any WAV — phone voice recorder then convert to WAV)
   2. Save/replace it as:  audio/help.wav        (next to this script's folder)
   3. Run:                 python3 make_help_header.py
-     (on Windows maybe:   python make_help_header.py)
   4. Re-upload the SpeakerSayHelp_MAX98357A sketch — new voice is in.
 
-It trims silence, normalizes loudness, and writes:
-  SpeakerSayHelp_MAX98357A/help_sound.h
+What it does (in order):
+  - trims silence at both ends
+  - high-pass 170 Hz   -> removes bass the small speaker can't play (less mud)
+  - presence boost     -> +4.5 dB around 2.6 kHz = crisper consonants
+  - loudness stage     -> +5.5 dB gain with soft limiter = louder, no hard clipping
+  - normalize to 99%   -> uses the full digital range
+  - writes SpeakerSayHelp_MAX98357A/help_sound.h
+
+Pure standard library — no numpy/scipy needed.
 """
 
-import wave, struct, os, sys
+import wave, struct, os, sys, math
 
 IN_WAV   = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
 OUT_HDR  = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
-PAD_SEC  = 0.12   # silence kept around the speech
-TARGET   = 0.85   # normalize peak to 85% of full scale
+PREVIEW  = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
+PAD_SEC  = 0.12
+
+def highpass(xs, f0, fs, Q=0.707):
+    w0 = 2*math.pi*f0/fs; a = math.sin(w0)/(2*Q); c = math.cos(w0)
+    b0,b1,b2 = (1+c)/2, -(1+c), (1+c)/2
+    a0,a1,a2 = 1+a, -2*c, 1-a
+    x1=x2=y1=y2=0; out=[]
+    for x in xs:
+        y = (b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2)/a0
+        out.append(y); x2,x1,y2,y1 = x1,x,y1,y
+    return out
+
+def highshelf(xs, f0, fs, gain_db, Q=0.9):
+    A = 10**(gain_db/40); w0 = 2*math.pi*f0/fs
+    sq = math.sqrt(A); c = math.cos(w0); al = math.sin(w0)/(2*Q)
+    b0 = A*((A+1) + (A-1)*c + 2*sq*al)
+    b1 = -2*A*((A-1) + (A+1)*c)
+    b2 = A*((A+1) + (A-1)*c - 2*sq*al)
+    a0 = (A+1) - (A-1)*c + 2*sq*al
+    a1 = 2*((A-1) - (A+1)*c)
+    a2 = (A+1) - (A-1)*c - 2*sq*al
+    x1=x2=y1=y2=0; out=[]
+    for x in xs:
+        y = (b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2)/a0
+        out.append(y); x2,x1,y2,y1 = x1,x,y1,y
+    return out
+
+def rms_db(xs):
+    r = math.sqrt(sum(x*x for x in xs)/len(xs))
+    return 20*math.log10(r/32768) if xs else -99
 
 def main():
     if not os.path.exists(IN_WAV):
@@ -29,45 +64,61 @@ def main():
     w = wave.open(IN_WAV, "rb")
     nch, sw, sr, n = w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getnframes()
     if sw != 2:
-        sys.exit("ERROR: WAV must be 16-bit (yours is %d-bit). Re-export as 16-bit PCM." % (sw * 8))
+        sys.exit("ERROR: WAV must be 16-bit (yours is %d-bit)." % (sw*8))
     raw = w.readframes(n); w.close()
-
-    samples = list(struct.unpack("<%dh" % (len(raw) // 2), raw))
-
-    # stereo -> mono (average channels)
+    samples = list(struct.unpack("<%dh" % (len(raw)//2), raw))
     if nch == 2:
-        samples = [(samples[i] + samples[i + 1]) // 2 for i in range(0, len(samples) - 1, 2)]
+        samples = [(samples[i]+samples[i+1])//2 for i in range(0, len(samples)-1, 2)]
     elif nch != 1:
-        sys.exit("ERROR: only mono/stereo supported (got %d channels)" % nch)
+        sys.exit("ERROR: only mono/stereo supported.")
 
-    peak = max(abs(s) for s in samples) or 1
-    thr = peak * 0.03
-    first = next((i for i, s in enumerate(samples) if abs(s) > thr), 0)
-    last  = next((len(samples) - 1 - i for i, s in enumerate(reversed(samples)) if abs(s) > thr),
-                 len(samples) - 1)
+    before = rms_db(samples)
 
-    pad = int(PAD_SEC * sr)
-    s, e = max(0, first - pad), min(len(samples), last + pad)
-    out = samples[s:e]
+    # trim silence
+    peak = max(map(abs, samples)) or 1
+    thr = peak*0.03
+    first = next((i for i,s in enumerate(samples) if abs(s) > thr), 0)
+    last  = next((len(samples)-1-i for i,s in enumerate(reversed(samples)) if abs(s) > thr),
+                 len(samples)-1)
+    pad = int(PAD_SEC*sr)
+    xs = [s/32768.0 for s in samples[max(0,first-pad):min(len(samples), last+pad)]]
 
-    g = TARGET * 32767.0 / peak
-    out = [max(-32767, min(32767, int(x * g))) for x in out]
+    # clarity + loudness chain
+    xs = highpass(xs, 170.0, sr)
+    xs = highshelf(xs, 2600.0, sr, +4.5)
+    g = 10**(5.5/20)
+    lim = []
+    for x in xs:
+        x *= g
+        a = abs(x)
+        if a > 0.75:
+            a = 0.75 + 0.25*math.tanh((a-0.75)/0.25)
+        lim.append(math.copysign(a, x))
+    pk = max(map(abs, lim)) or 1
+    out = [max(-32767, min(32767, int(x/pk*0.99*32767))) for x in lim]
+
+    after = rms_db(out)
 
     with open(OUT_HDR, "w") as f:
-        f.write("// VocalBridge — 'Help!' voice, auto-generated from audio/help.wav\n")
+        f.write("// VocalBridge — 'Help!' voice (LOUD+CRISP), from audio/help.wav\n")
         f.write("// %d Hz, mono, 16-bit PCM, %d samples (%.2f s). Do not edit by hand.\n"
-                % (sr, len(out), len(out) / sr))
-        f.write("// Regenerate with: python3 make_help_header.py  (after replacing audio/help.wav)\n")
+                % (sr, len(out), len(out)/sr))
+        f.write("// Regenerate: python3 make_help_header.py  (after replacing audio/help.wav)\n")
         f.write("#pragma once\n#include <Arduino.h>\n\n")
         f.write("static const uint32_t HELP_SAMPLE_RATE = %d;\n" % sr)
         f.write("static const uint32_t HELP_NUM_SAMPLES = %d;\n" % len(out))
         f.write("static const int16_t HELP_PCM[] = {\n")
         for i in range(0, len(out), 16):
-            f.write("  " + ",".join(str(v) for v in out[i:i + 16])
-                    + ("," if i + 16 < len(out) else "") + "\n")
+            f.write("  " + ",".join(str(v) for v in out[i:i+16])
+                    + ("," if i+16 < len(out) else "") + "\n")
         f.write("};\n")
 
-    print("OK: %d samples @ %d Hz (%.2f s) -> %s" % (len(out), sr, len(out) / sr, OUT_HDR))
+    pv = wave.open(PREVIEW, "wb"); pv.setnchannels(1); pv.setsampwidth(2); pv.setframerate(sr)
+    pv.writeframes(struct.pack("<%dh" % len(out), *out)); pv.close()
+
+    print("OK: %d samples @ %d Hz (%.2f s)" % (len(out), sr, len(out)/sr))
+    print("loudness: %.1f -> %.1f dBFS  (+%.1f dB)" % (before, after, after-before))
+    print("preview (play on PC to hear it): %s" % PREVIEW)
     print("Now re-upload the SpeakerSayHelp_MAX98357A sketch.")
 
 if __name__ == "__main__":

@@ -12,8 +12,16 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   ① speaker itself (battery pop test: wires on a 1.5V AA, clean pop = OK)
   ② amp clipping (volume `-`×5 test; fix = volume ≤8 or GAIN→VIN = 0dB)
   ③ dud amp clone (if ① ② pass → replace board)
-- **All 3 sketches now use APLL (precision audio clock) with auto-fallback** —
-  re-upload needed to test that path.
+- **✅ SOLVED (5 Sep, late): EXCHANGED BOARD WORKS.** Clean chime on SpeakerTest.
+  The original unit was defective (lemon) — diagnosis chain (LRC isolation → re-solder
+  → code fixes → exchange) validated. **"Help!" voice CONFIRMED WORKING too.**
+- **Audio tuning (5 Sep, night):** user wanted louder + crisper →
+  ① help_sound.h rebuilt as LOUD+CRISP edition (+4.7 dB loudness, HPF 170 Hz,
+  presence +4.5 dB @ 2.6 kHz, soft limiter; same voice take). make_help_header.py
+  now applies this chain automatically. Preview: audio/help_enhanced.wav.
+  ② advised GAIN→GND wire (+3 dB) + VIN-on-5V check + speaker-in-a-box acoustic tip.
+- ⚠️ IMPORTANT: the code pasted in chat (Sep 5) predates the APLL patch. For the new
+  board, download the latest sketches from the `beep` branch on GitHub.
 - Older context: garble with LRC dangling + all 6 Wire Doctor mappings failing →
   buzz splitter test isolated the fault to the LRC path (power/amp/speaker/BCLK/DIN
   were all confirmed good).
@@ -79,6 +87,19 @@ DFPlayer (if ever bought): VCC->VIN(5V) GND->GND RX->GPIO26 TX->GPIO27 (crossed!
 
 **Note:** every sketch now lives in its own subfolder (Arduino IDE merges all .ino
 files in one folder into one sketch — that would break the build).
+
+## 🔍 HARDWARE AUTHENTICITY AUDIT (5 Sep, via Amazon listings)
+- **MAX98357A board (B0H99FVF3V)**: Brand "**Generic**", ₹269 (fake MRP ₹399). Generic
+  Chinese breakout (Adafruit-design copy — legal/normal). Chip authenticity lottery;
+  theirs distorts constantly despite soldering + code fixes → **likely defective unit /
+  reject-grade chip. ACTION: claim Amazon 10-day defective replacement, or pivot to
+  DFPlayer Mini (code ready) / branded board (ROBODUINO, Robocraze SmartElex).**
+- **Electronic Spices 2″ 4Ω 5W speaker (B0BN44HPF9)**: genuine Indian budget brand,
+  ₹143, sold via Clicktech/Amazon — not fake, just cheap. Battery pop test = final check.
+- **AD8232 (red SparkFun-style board)**: design clone (normal in India) but PROVEN
+  working — rest ~2047, clench dev 682, leads-off OK. Fine.
+- **ESP32 DevKit**: proven working across all sessions. Fine.
+- **Spandan (Sunfox) ECG electrodes**: genuine medical brand. Fine (drying = normal wear).
 
 ## 📁 File history (for archaeology)
 - `workspace-01a06757…/` (earlier session): docs, poster, report, academy, BOM+speaker plan

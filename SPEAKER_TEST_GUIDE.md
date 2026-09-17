@@ -102,6 +102,34 @@ The built-in clip is an AI voice (you picked it in chat). To use your own:
 
 ---
 
+# 🔊 Make it LOUDER and CLEARER
+
+**Software (done — just re-download):** `help_sound.h` on the `beep` branch is now the
+**LOUD+CRISP** build: same voice take, +4.7 dB louder, bass-mud removed (170 Hz high-pass),
+consonant boost (+4.5 dB @ 2.6 kHz), soft-limited so it never hard-clips.
+Preview on your PC: `audio/help_enhanced.wav`.
+
+**Hardware GAIN pin (free +3 dB):** one extra wire on the MAX98357A —
+
+| GAIN pin | Amp gain | vs default |
+|---|---|---|
+| not connected (default) | 9 dB | — |
+| **→ GND** | **12 dB** | **+3 dB (louder!)** |
+| → VIN | 6 dB | −3 dB (quieter) |
+
+Wire **GAIN → GND** for maximum loudness. If the voice then sounds harsh at volume 21,
+drop to 18 — that's the amp's honest limit, not a fault.
+
+**Power check:** the amp's VIN must be on the ESP32's **VIN (5V)** pin — on 3V3 it's
+permanently ~3.5 dB quieter.
+
+**Acoustic trick (free, big):** a bare speaker cancels itself — front wave meets back
+wave. Mount it in ANY small box/cup with a speaker-sized hole (even a matchbox or
+plastic bottle cap ring) and it gets dramatically louder AND clearer. Best free
+upgrade there is.
+
+---
+
 ## Troubleshooting (Plan A)
 
 | Symptom | Likely cause | Fix |
