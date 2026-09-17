@@ -104,13 +104,13 @@ The built-in clip is an AI voice (you picked it in chat). To use your own:
 
 # 🔊 Make it LOUDER and CLEARER
 
-**Software (v2 — current):** `help_sound.h` on the `beep` branch is the
-**LOUD v2 + CRISP + 12% slower** build: voice-02 (user-chosen from 8 auditions),
-pitch-preserved slow-down, bass-mud removed (170 Hz HPF), consonant boost
-(+4.5 dB @ 2.6 kHz), +14 dB loudness with deep soft-knee compression → RMS −9.7 dBFS
-(≈ 5 dB louder than v1). Preview on your PC: `audio/help_enhanced.wav`.
-To re-tune speed/loudness: edit `STRETCH` / `GAIN_DB` / `KNEE` at the top of
-`make_help_header.py` and re-run it.
+**Software (v3 — current):** `help_sound.h` on the `beep` branch = voice-02 saying
+**"Help! Help, please!"** — the most human take of 3 candidates (highest measured
+energy + intonation motion; serious but not monotone). 15% slower (pitch-preserved),
+clarity EQ (170 Hz HPF + presence), RMS **−8.8 dBFS** (v2 was −9.7). 1.03 s long.
+Preview: `audio/help_enhanced.wav`. Alternative serious single-word take saved at
+`audio/help_alt_serious.wav` — swap it in as `audio/help.wav` and re-run the script.
+To re-tune: `STRETCH` / `GAIN_DB` / `KNEE` at the top of `make_help_header.py`.
 
 **Hardware GAIN pin (free +3 dB):** one extra wire on the MAX98357A —
 

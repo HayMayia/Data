@@ -6,7 +6,7 @@ Use this to put ANY voice into the ESP32 (record "Help!", save as audio/help.wav
 
 Processing chain (in order):
   1. silence trim
-  2. TIME-STRETCH 1.12x  -> ~12% slower, pitch preserved (WSOLA-style, pure python)
+  2. TIME-STRETCH 1.15x  -> ~15% slower, pitch preserved (WSOLA-style, pure python)
   3. high-pass 170 Hz    -> removes bass the small speaker can't play (less mud)
   4. presence +4.5 dB @ 2.6 kHz -> crisper consonants
   5. LOUDNESS v2: +14 dB gain with deep soft-knee compression + tanh saturation
@@ -26,7 +26,7 @@ IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
 OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
-STRETCH = 1.12     # 1.0 = original speed, 1.12 = 12% slower
+STRETCH = 1.15     # 1.0 = original speed, 1.15 = 15% slower
 GAIN_DB = 14.0     # loudness makeup gain before the soft limiter
 KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression
 

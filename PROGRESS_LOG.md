@@ -26,11 +26,11 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   buzz splitter test isolated the fault to the LRC path (power/amp/speaker/BCLK/DIN
   were all confirmed good).
 - When GPIO33 is taken by LRC, the muscle sensor's LO− moves to GPIO35 later.
-- **Audio v2 (mid-Sep):** user chose a new voice (voice-02, from 8-candidate audition)
-  + wanted slower & louder → new chain: 12% pitch-preserved slow-down (WSOLA),
-  HPF 170 Hz, presence +4.5 dB, +14 dB gain with knee-0.35 soft compression
-  → RMS −9.7 dBFS (v1 was −14.4). Params tunable at top of make_help_header.py
-  (STRETCH / GAIN_DB / KNEE). Also advised again: GAIN→GND wire (+3 dB) + box mount.
+- **Audio v3 (mid-Sep):** user wanted slower / a little louder / more human, less
+  robotic-but-serious → generated 3 phrasing takes with voice-02, measured prosody
+  (energy + intonation motion): winner = **"Help! Help, please!"** (takeC, motion 0.98/1.38
+  vs 0.65/0.60 for the serious variant). Final: 15% slower, RMS −8.8 dBFS, 1.03 s.
+  Alt serious take kept at audio/help_alt_serious.wav. Params: STRETCH=1.15, GAIN_DB=14, KNEE=0.35.
 - **Status (mid-Sep):** audio system DONE (loud+crisp "Help!" confirmed). Exams nearly
   over (only Computers left). Next session: fresh pads → v13 (clench → "Help!") → film.
 
