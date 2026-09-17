@@ -26,8 +26,8 @@ IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
 OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
-STRETCH = 2.3      # 1.0 = original speed. v3 was 1.15; user wants half of v3's
-                   # speed => 1.15 * 2 = 2.3. Pitch is PRESERVED (no deep/chipmunk voice).
+STRETCH = 3.0      # 1.0 = original speed. 3.0 = one-third speed (user request).
+
 GAIN_DB = 14.0     # loudness makeup gain before the soft limiter
 KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression
 

@@ -110,7 +110,10 @@ no deep/chipmunk effect; WSOLA verified artifact-free). Clarity EQ + loudness ch
 unchanged (RMS −9.8 dBFS, peaks 0.99). **2.03 s long.**
 Preview: `audio/help_enhanced.wav`.
 Speed dial (edit `STRETCH` in `make_help_header.py`, re-run): 1.15 = v3 (fast) ·
-1.5 = a bit slow · 1.8 = slow · **2.3 = current (half of v3)** · 2.6 = very slow.
+1.5 = a bit slow · 1.8 = slow · 2.3 = v4 · **3.0 = current (v5, 2.64 s)** · 3.5 = very slow.
+⚠️ The speed is baked into help_sound.h — there is NO speed setting in the .ino sketch.
+To change speed: re-download the new help_sound.h (or ask me to rebuild), replace the
+file in the sketch folder, delete any old copies, re-upload.
 
 **Hardware GAIN pin (free +3 dB):** one extra wire on the MAX98357A —
 
