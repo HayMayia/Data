@@ -26,11 +26,12 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   buzz splitter test isolated the fault to the LRC path (power/amp/speaker/BCLK/DIN
   were all confirmed good).
 - When GPIO33 is taken by LRC, the muscle sensor's LO− moves to GPIO35 later.
-- **Audio v3 (mid-Sep):** user wanted slower / a little louder / more human, less
-  robotic-but-serious → generated 3 phrasing takes with voice-02, measured prosody
-  (energy + intonation motion): winner = **"Help! Help, please!"** (takeC, motion 0.98/1.38
-  vs 0.65/0.60 for the serious variant). Final: 15% slower, RMS −8.8 dBFS, 1.03 s.
-  Alt serious take kept at audio/help_alt_serious.wav. Params: STRETCH=1.15, GAIN_DB=14, KNEE=0.35.
+- **Audio v4 (mid-Sep):** user: "very fast, make it 0.5x current speed, same voice,
+  no cackling" → STRETCH 1.15→2.3 (half speed), WSOLA upgraded for big ratios
+  (30 ms grains, 12 ms search, energy-normalized correlation). Artifact check:
+  stretch adds ZERO discontinuities (mastered-unstretched 7.7% fast-transitions vs
+  stretched 6.65% — the transitions are from the treble EQ, present in both).
+  Result: 2.03 s, RMS −9.8 dBFS, pitch unchanged.
 - **Status (mid-Sep):** audio system DONE (loud+crisp "Help!" confirmed). Exams nearly
   over (only Computers left). Next session: fresh pads → v13 (clench → "Help!") → film.
 

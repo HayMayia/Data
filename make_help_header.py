@@ -6,7 +6,7 @@ Use this to put ANY voice into the ESP32 (record "Help!", save as audio/help.wav
 
 Processing chain (in order):
   1. silence trim
-  2. TIME-STRETCH 1.15x  -> ~15% slower, pitch preserved (WSOLA-style, pure python)
+  2. TIME-STRETCH 2.3x   -> half of v3's speed, pitch preserved (WSOLA, upgraded)
   3. high-pass 170 Hz    -> removes bass the small speaker can't play (less mud)
   4. presence +4.5 dB @ 2.6 kHz -> crisper consonants
   5. LOUDNESS v2: +14 dB gain with deep soft-knee compression + tanh saturation
@@ -26,7 +26,8 @@ IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
 OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_sound.h")
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
-STRETCH = 1.15     # 1.0 = original speed, 1.15 = 15% slower
+STRETCH = 2.3      # 1.0 = original speed. v3 was 1.15; user wants half of v3's
+                   # speed => 1.15 * 2 = 2.3. Pitch is PRESERVED (no deep/chipmunk voice).
 GAIN_DB = 14.0     # loudness makeup gain before the soft limiter
 KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression
 
@@ -56,8 +57,10 @@ def highshelf(xs, f0, fs, gain_db, Q=0.9):
         out.append(y); x2,x1,y2,y1 = x1,x,y1,y
     return out
 
-def time_stretch(xs, ratio, fs, grain_ms=22.0, search_ms=6.0):
-    """WSOLA-style overlap-add. ratio>1 = longer/slower, pitch preserved."""
+def time_stretch(xs, ratio, fs, grain_ms=30.0, search_ms=12.0):
+    """WSOLA-style overlap-add. ratio>1 = longer/slower, pitch preserved.
+    Big ratios (2x+) need bigger grains + wider search + energy-normalized
+    correlation, or the result warbles."""
     if abs(ratio - 1.0) < 0.001:
         return xs[:]
     N  = int(grain_ms * fs / 1000)
@@ -78,9 +81,13 @@ def time_stretch(xs, ratio, fs, grain_ms=22.0, search_ms=6.0):
             best, bestscore = ideal, -1e30
             lo, hi = max(0, ideal-S), min(len(xs)-N, ideal+S)
             for cand in range(lo, hi, 2):
-                sc = 0.0
-                for k in range(0, N//2, 8):
-                    sc += xs[cand+k]*out[synth+k]
+                sc = 0.0; en = 0.0
+                for k in range(0, N, 4):
+                    v = xs[cand+k]
+                    sc += v*out[synth+k]
+                    en += v*v
+                if en > 0:
+                    sc /= math.sqrt(en)   # normalize: don't chase loud grains
                 if sc > bestscore:
                     bestscore, best = sc, cand
             ana = best
@@ -89,7 +96,6 @@ def time_stretch(xs, ratio, fs, grain_ms=22.0, search_ms=6.0):
             wsum[synth+i] += win[i]
         synth += Hs
     res = [ (out[i]/wsum[i]) if wsum[i] > 0.01 else 0.0 for i in range(out_len) ]
-    # trim trailing silence introduced by the stretch
     while res and abs(res[-1]) < 1e-4: res.pop()
     return res
 
