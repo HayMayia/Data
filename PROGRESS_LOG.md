@@ -38,8 +38,16 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   + presence EQ) sounds harsh on full-range speakers BY DESIGN — it's mastered for
   the 2-inch driver + amp. Alarm beeps live in CODE, not in the preview.
   → Added audio/help_preview_natural.wav (same speed, no mastering) for fair listening.
-  NEXT: user uploads SpeakerSayHelp_v8.zip to the actual board; success = beep-beep
-  + slow clean voice. (Earlier v8 countermeasures — new filename, boot banner with
+  NEXT: user uploads SpeakerSayHelp_v9.zip to the actual board; success = beep-beep
+  + slow clean voice.
+- **Audio v9 (18 Sep, final approach):** user feedback on natural preview: elongated
+  take "not the voice I chose" + still cackly → root causes: ① elongated spelling
+  changes pronunciation character ② WSOLA on long vowels warbles ③ (hidden) all three
+  new "pause" TTS takes were near-silent DUDS (peak 0.05-0.10). FIX: recovered the
+  user-approved v3 take ("Help! Help, please!", peak 0.70) from git history,
+  inserted 850 ms silence at detected word-boundary valleys — natural words, slow
+  phrase, ZERO stretch. 2.56 s, active RMS −5 dB. Added dud-rejection (peak<0.25 =
+  error) to make_help_header.py. help_voice_v9.h + SpeakerSayHelp_v9.zip pushed. (Earlier v8 countermeasures — new filename, boot banner with
   compile stamp, alarm intro, RMS −6.4 dBFS, volume 15 — all still apply and are
   exactly what makes the on-device test unambiguous.)
 - **Status (mid-Sep):** audio system DONE (loud+crisp "Help!" confirmed). Exams nearly

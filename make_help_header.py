@@ -6,7 +6,7 @@ Use this to put ANY voice into the ESP32 (record "Help!", save as audio/help.wav
 
 Processing chain (in order):
   1. silence trim
-  2. TIME-STRETCH 2.3x   -> half of v3's speed, pitch preserved (WSOLA, upgraded)
+  2. PAUSE INSERTION    -> words spoken naturally, 550 ms silence between them
   3. high-pass 170 Hz    -> removes bass the small speaker can't play (less mud)
   4. presence +4.5 dB @ 2.6 kHz -> crisper consonants
   5. LOUDNESS v2: +14 dB gain with deep soft-knee compression + tanh saturation
@@ -23,10 +23,11 @@ Standard library only.
 import wave, struct, os, sys, math
 
 IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
-OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_voice_v8.h")
+OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_voice_v9.h")
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
-STRETCH = 1.75     # gentle stretch on top of the natively-slow TTS take (Heeeelp!)
+STRETCH = 1.0      # v9: NO stretch at all (stretch was the cackle source)
+PAUSE_S = 0.85     # silence inserted between words (the v9 slowness method)
 
 GAIN_DB = 18.0     # loudness makeup gain before the soft limiter
 KNEE    = 0.30     # soft-knee threshold (0..1) — lower = more compression
@@ -99,6 +100,52 @@ def time_stretch(xs, ratio, fs, grain_ms=30.0, search_ms=12.0):
     while res and abs(res[-1]) < 1e-4: res.pop()
     return res
 
+
+def insert_pauses(xs, sr, pause_s=0.55, valley_thresh=0.03):
+    """v9 slowness method: split at near-silent valleys between words and insert
+    clean silence. Words keep natural pronunciation; NO time-stretch is used."""
+    fl = int(0.01*sr)
+    env = [math.sqrt(sum(x*x for x in xs[i:i+fl])/fl) for i in range(0, max(1,len(xs)-fl), fl)]
+    sm = [sum(env[max(0,i-2):i+3])/len(env[max(0,i-2):i+3]) for i in range(len(env))]
+    if not sm: return xs
+    mx = max(sm)
+    cuts = []
+    last = -999
+    for i in range(2, len(sm)-2):
+        t = i*0.01
+        if (sm[i] <= sm[i-1] and sm[i] <= sm[i+1] and sm[i] < mx*valley_thresh
+                and t > 0.10 and t < len(xs)/sr - 0.10 and (i-last)*0.01 > 0.12):
+            cuts.append(i*fl); last = i
+    if not cuts: return xs
+    bounds = [0] + cuts + [len(xs)]
+    chunks = []
+    for a, b in zip(bounds, bounds[1:]):
+        seg = xs[a:b]
+        # trim inner silence beyond 50 ms at each end
+        fl2 = int(0.005*sr)
+        e = [abs(v) for v in seg]
+        thr = max(e)*0.06 if e else 0
+        s0 = 0
+        while s0 < len(seg)-fl2 and max(e[s0:s0+fl2]) < thr: s0 += fl2
+        s1 = len(seg)
+        while s1 > fl2 and max(e[s1-fl2:s1]) < thr: s1 -= fl2
+        seg = seg[max(0,s0-int(0.05*sr)) : min(len(seg), s1+int(0.05*sr))]
+        if len(seg) < int(0.08*sr):     # too tiny -> skip
+            continue
+        f = int(0.008*sr)               # 8 ms fade edges (click-free)
+        for i in range(min(f, len(seg))):
+            g = i/f
+            seg[i] *= g
+            seg[-1-i] *= g
+        chunks.append(seg)
+    if len(chunks) < 2: return xs
+    silence = [0.0]*int(pause_s*sr)
+    out = []
+    for i, c in enumerate(chunks):
+        if i: out += silence
+        out += c
+    return out
+
 def rms_db(xs):
     r = math.sqrt(sum(x*x for x in xs)/len(xs))
     return 20*math.log10(r/32768) if xs else -99
@@ -119,6 +166,10 @@ def main():
     elif nch != 1:
         sys.exit("ERROR: only mono/stereo supported.")
 
+    if max(map(abs, samples)) < 0.25:
+        sys.exit("ERROR: this WAV is a near-silent dud (peak < 0.25). "
+                 "Re-generate/re-record the take and try again.")
+
     before = rms_db(samples)
 
     # 1) trim silence
@@ -130,8 +181,9 @@ def main():
     pad = int(PAD_SEC*sr)
     xs = [s/32768.0 for s in samples[max(0,first-pad):min(len(samples), last+pad)]]
 
-    # 2) slower (pitch preserved)
-    xs = time_stretch(xs, STRETCH, sr)
+    # 2) slower = natural words + inserted pauses (v9: zero stretch)
+    xs = time_stretch(xs, STRETCH, sr)     # STRETCH=1.0 -> no-op safety
+    xs = insert_pauses(xs, sr, pause_s=PAUSE_S)
 
     # 3) clarity
     xs = highpass(xs, 170.0, sr)
@@ -160,7 +212,7 @@ def main():
                 % (sr, len(out), len(out)/sr))
         f.write("// Regenerate: python3 make_help_header.py  (after replacing audio/help.wav)\n")
         f.write("#pragma once\n#include <Arduino.h>\n\n")
-        f.write('#define HELP_VOICE_VERSION "v8 - 2.81s - LOUDER + alarm intro (Heeeelp! Heeeeelp, pleeeeease!)"\n\n')
+        f.write('#define HELP_VOICE_VERSION "v9 - natural words + 550ms pauses - ZERO stretch (Help! Help! Help, please!)"\n\n')
         f.write("static const uint32_t HELP_SAMPLE_RATE = %d;\n" % sr)
         f.write("static const uint32_t HELP_NUM_SAMPLES = %d;\n" % len(out))
         f.write("static const int16_t HELP_PCM[] = {\n")

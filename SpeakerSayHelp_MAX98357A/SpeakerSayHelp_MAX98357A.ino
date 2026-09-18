@@ -34,7 +34,7 @@
  *   to the chat and I'll convert it for you.
  */
 
-#include "help_voice_v8.h"   // v7 — NEW FILENAME (old help_sound.h is retired.
+#include "help_voice_v9.h"   // v9 — see header for version.
                              // If this file is missing the compile FAILS on purpose —
                              // that means the sketch folder isn't the one you think.)
 
