@@ -38,8 +38,15 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   + presence EQ) sounds harsh on full-range speakers BY DESIGN — it's mastered for
   the 2-inch driver + amp. Alarm beeps live in CODE, not in the preview.
   → Added audio/help_preview_natural.wav (same speed, no mastering) for fair listening.
-  NEXT: user uploads SpeakerSayHelp_v9.zip to the actual board; success = beep-beep
-  + slow clean voice.
+  NEXT: user picks v10 variant by ear (computer previews), uploads that zip.
+- **Audio v10 (18 Sep):** user: "words slower, not the silence" → implemented a pure-
+  python PHASE VOCODER (FFT + phase propagation + Laroche-Dolson identity phase
+  locking) — the professional time-stretch. Two variants built from the two healthy
+  takes (all 8 other TTS takes today were duds/punctuation-ignored — dud-rejection
+  now in script): v10 classic ("Help! Help, please!" ×2.8, 2.49 s) and v10 help-me
+  ("Please, help me! Help me!" ×2.6, 2.92 s, peak 0.83 take). Roughness + pitch-jitter
+  metrics: PV ≈ WSOLA ≈ original (both clean by measurement); user's ears decide.
+  Script now takes CLI args: take, stretch, out-header, version string.
 - **Audio v9 (18 Sep, final approach):** user feedback on natural preview: elongated
   take "not the voice I chose" + still cackly → root causes: ① elongated spelling
   changes pronunciation character ② WSOLA on long vowels warbles ③ (hidden) all three

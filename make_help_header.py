@@ -23,11 +23,11 @@ Standard library only.
 import wave, struct, os, sys, math
 
 IN_WAV  = os.path.join(os.path.dirname(__file__), "audio", "help.wav")
-OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_voice_v9.h")
+OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "help_voice_v10.h")
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
-STRETCH = 1.0      # v9: NO stretch at all (stretch was the cackle source)
-PAUSE_S = 0.85     # silence inserted between words (the v9 slowness method)
+STRETCH = 2.8      # v10: words stretched 2.8x by the PHASE VOCODER (clean)
+PAUSE_S = 0.0      # v10: no artificial pauses — the words themselves are slow
 
 GAIN_DB = 18.0     # loudness makeup gain before the soft limiter
 KNEE    = 0.30     # soft-knee threshold (0..1) — lower = more compression
@@ -146,12 +146,116 @@ def insert_pauses(xs, sr, pause_s=0.55, valley_thresh=0.03):
         out += c
     return out
 
+
+# ----------------------------------------------------------------------
+# PHASE VOCODER — high-quality time-stretch (this is what music editors
+# use). Handles 2-3x ratios cleanly where simple WSOLA cackles.
+# Pure python, no numpy needed.
+# ----------------------------------------------------------------------
+def _fft(a):
+    n = len(a)
+    j = 0
+    for i in range(1, n):
+        bit = n >> 1
+        while j & bit: j ^= bit; bit >>= 1
+        j |= bit
+        if i < j: a[i], a[j] = a[j], a[i]
+    length = 2
+    while length <= n:
+        ang = -2*math.pi/length
+        wr, wi = math.cos(ang), math.sin(ang)
+        half = length >> 1
+        for i in range(0, n, length):
+            cr, ci = 1.0, 0.0
+            for k in range(i, i+half):
+                u = a[k]; v = a[k+half]
+                vr = v.real*cr - v.imag*ci
+                vi = v.real*ci + v.imag*cr
+                a[k] = complex(u.real+vr, u.imag+vi)
+                a[k+half] = complex(u.real-vr, u.imag-vi)
+                cr, ci = cr*wr-ci*wi, cr*wi+ci*wr
+        length <<= 1
+    return a
+
+def pv_stretch(xs, ratio, N=1024, hopA=256):
+    if abs(ratio-1.0) < 0.02:
+        return xs[:]
+    hopS = int(round(hopA*ratio))
+    win = [0.5-0.5*math.cos(2*math.pi*i/N) for i in range(N)]
+    half = N//2
+    # analysis
+    mags, phs = [], []
+    for t in range(0, len(xs)-N+1, hopA):
+        fr = [complex(xs[t+i]*win[i], 0.0) for i in range(N)]
+        F = _fft(fr)
+        mags.append([abs(F[k]) for k in range(half+1)])
+        phs.append([math.atan2(F[k].imag, F[k].real) for k in range(half+1)])
+    if not mags: return xs[:]
+    nf = len(mags)
+    def princ(x): return (x + math.pi) % (2*math.pi) - math.pi
+    out_len = (nf-1)*hopS + N
+    y  = [0.0]*out_len
+    wsum = [0.0]*out_len
+    theta = phs[0][:]
+    TWO_PI = 2*math.pi
+    for i in range(nf):
+        if i > 0:
+            # instantaneous frequencies
+            om = [0.0]*(half+1)
+            for k in range(half+1):
+                om[k] = (TWO_PI*k/N) + princ(phs[i][k]-phs[i-1][k]-TWO_PI*k*hopA/N)/hopA
+            # advance synthesis phases
+            for k in range(half+1):
+                theta[k] += om[k]*hopS
+            # identity phase locking (Laroche-Dolson): lock regions to peaks
+            m = mags[i]
+            peaks = [k for k in range(1, half)
+                     if m[k] > m[k-1] and m[k] >= m[k+1] and m[k] > 0.02*max(m)]
+            if peaks:
+                # rotation at each peak
+                rot = {p: princ(theta[p]-phs[i][p]) for p in peaks}
+                bounds = [0]
+                for a_, b_ in zip(peaks, peaks[1:]):
+                    bounds.append((a_+b_)//2)
+                bounds.append(half+1)
+                for bi in range(len(peaks)):
+                    p = peaks[bi]
+                    for k in range(bounds[bi], bounds[bi+1]):
+                        theta[k] = phs[i][k] + rot[p]
+        # build synthesis spectrum (conjugate symmetric)
+        spec = [0.0]*N
+        spec[0] = complex(mags[i][0]*math.cos(theta[0]), mags[i][0]*math.sin(theta[0]))
+        for k in range(1, half):
+            mg = mags[i][k]
+            spec[k] = complex(mg*math.cos(theta[k]), mg*math.sin(theta[k]))
+            spec[N-k] = complex(spec[k].real, -spec[k].imag)
+        spec[half] = complex(mags[i][half]*math.cos(theta[half]),
+                             mags[i][half]*math.sin(theta[half]))
+        # inverse FFT
+        for k in range(N): spec[k] = complex(spec[k].imag, spec[k].real)  # swap re/im trick
+        _fft(spec)
+        for k in range(N): spec[k] = complex(spec[k].imag, spec[k].real)
+        yk = [spec[k].real/N for k in range(N)]
+        pos = i*hopS
+        for k in range(N):
+            y[pos+k]    += yk[k]*win[k]
+            wsum[pos+k] += win[k]*win[k]
+    res = [ (y[i]/wsum[i]) if wsum[i] > 0.01 else 0.0 for i in range(out_len) ]
+    while res and abs(res[-1]) < 1e-4: res.pop()
+    return res
+
 def rms_db(xs):
     r = math.sqrt(sum(x*x for x in xs)/len(xs))
     return 20*math.log10(r/32768) if xs else -99
 
 # ----------------------------------------------------------------------
 def main():
+    global IN_WAV, STRETCH, OUT_HDR, HELP_VOICE_VERSION
+    in_wav  = sys.argv[1] if len(sys.argv) > 1 else IN_WAV
+    stretch = float(sys.argv[2]) if len(sys.argv) > 2 else STRETCH
+    out_hdr = sys.argv[3] if len(sys.argv) > 3 else OUT_HDR
+    ver     = sys.argv[4] if len(sys.argv) > 4 else HELP_VOICE_VERSION
+    IN_WAV, STRETCH, OUT_HDR, HELP_VOICE_VERSION = in_wav, stretch, out_hdr, ver
     if not os.path.exists(IN_WAV):
         sys.exit("ERROR: %s not found — record 'Help!' and save it there." % IN_WAV)
 
@@ -181,9 +285,12 @@ def main():
     pad = int(PAD_SEC*sr)
     xs = [s/32768.0 for s in samples[max(0,first-pad):min(len(samples), last+pad)]]
 
-    # 2) slower = natural words + inserted pauses (v9: zero stretch)
-    xs = time_stretch(xs, STRETCH, sr)     # STRETCH=1.0 -> no-op safety
-    xs = insert_pauses(xs, sr, pause_s=PAUSE_S)
+    # 2) slower = PHASE VOCODER stretch of the natural words (v10)
+    #    (clean at 2-3x, where simple WSOLA cackled)
+    if STRETCH > 1.02:
+        xs = pv_stretch(xs, STRETCH)
+    if PAUSE_S > 0.01:
+        xs = insert_pauses(xs, sr, pause_s=PAUSE_S)
 
     # 3) clarity
     xs = highpass(xs, 170.0, sr)
@@ -212,7 +319,7 @@ def main():
                 % (sr, len(out), len(out)/sr))
         f.write("// Regenerate: python3 make_help_header.py  (after replacing audio/help.wav)\n")
         f.write("#pragma once\n#include <Arduino.h>\n\n")
-        f.write('#define HELP_VOICE_VERSION "v9 - natural words + 550ms pauses - ZERO stretch (Help! Help! Help, please!)"\n\n')
+        f.write('#define HELP_VOICE_VERSION "v10 - words 2.8x slower via PHASE VOCODER (Help! Help, please!)"\n\n')
         f.write("static const uint32_t HELP_SAMPLE_RATE = %d;\n" % sr)
         f.write("static const uint32_t HELP_NUM_SAMPLES = %d;\n" % len(out))
         f.write("static const int16_t HELP_PCM[] = {\n")
