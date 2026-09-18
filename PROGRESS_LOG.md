@@ -30,7 +30,15 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   CACKLED — 3× exceeds the simple WSOLA's clean range. v6 fix: regenerate the take
   natively slow via elongated spellings ("Heeeelp! Heeeeelp, pleeeeease!", voice-02,
   1.49 s speech) + gentle 1.75× stretch → 2.81 s, RMS −8.1 dBFS, artifact delta +0.28%
-  (clean). LESSON: keep stretch ≤ ~2×; make the source itself slow instead. v6 = current.
+  (clean). LESSON: keep stretch ≤ ~2×; make the source itself slow instead.
+- **Audio v7→v8 (18 Sep):** user twice reported "sound is the same" despite new files
+  → stale-file/upload ghost suspected (v5 was the last version user provably heard:
+  slow+cackle). v8 countermeasures: new filename help_voice_v8.h (compile FAILS if
+  absent), boot banner (voice version + __DATE__/__TIME__ compile stamp — changes
+  every upload), 2-beep 1760 Hz alarm intro before the voice (audibly impossible to
+  confuse), RMS pushed to −6.4 dBFS (gain 18/knee 0.30, 6.1% at cap), default
+  volume 15. Full zip SpeakerSayHelp_v8.zip on beep branch. PENDING: user to report
+  the boot banner text — that single line resolves where the ghost lives.
 - **Status (mid-Sep):** audio system DONE (loud+crisp "Help!" confirmed). Exams nearly
   over (only Computers left). Next session: fresh pads → v13 (clench → "Help!") → film.
 

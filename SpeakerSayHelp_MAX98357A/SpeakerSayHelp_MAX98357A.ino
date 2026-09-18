@@ -34,7 +34,7 @@
  *   to the chat and I'll convert it for you.
  */
 
-#include "help_voice_v7.h"   // v7 — NEW FILENAME (old help_sound.h is retired.
+#include "help_voice_v8.h"   // v7 — NEW FILENAME (old help_sound.h is retired.
                              // If this file is missing the compile FAILS on purpose —
                              // that means the sketch folder isn't the one you think.)
 
@@ -53,7 +53,7 @@ const int PIN_LRC  = 26;
 const int PIN_DIN  = 25;
 const int BAUD     = 115200;
 
-int  volume   = 13;         // 0..21 (13 = clean on small speakers; raise with +)
+int  volume   = 15;         // 0..21 (13 = clean on small speakers; raise with +)
 bool loopMode = false;
 
 // ----------------------------------------------------------------------
@@ -109,8 +109,18 @@ bool loopMode = false;
 
 // ----------------------------------------------------------------------
 // Voice playback: stream HELP_PCM with volume + click-free fades
+// v8: 2-beep ALARM INTRO before the voice — impossible to miss, and
+// instantly tells you which version is running.
 // ----------------------------------------------------------------------
+const bool ALERT_INTRO = true;
+
+void playAlertBeeps() {
+  playTone(1760, 110); delay(90);   // two sharp high beeps
+  playTone(1760, 110); delay(220);
+}
+
 void playHelp() {
+  if (ALERT_INTRO) playAlertBeeps();
   const int FADE = 72;                       // ~3 ms at 24 kHz
   int16_t buf[256];
   uint32_t pos = 0;
@@ -227,6 +237,8 @@ void setup() {
   Serial.println("VocalBridge — SPEAKER SAYS 'HELP!' (MAX98357A, voice on-chip)");
   Serial.print("VOICE FILE: ");
   Serial.println(HELP_VOICE_VERSION);   // <- proves which voice is compiled in
+  Serial.print("COMPILED:   ");
+  Serial.print(__DATE__); Serial.print(" "); Serial.println(__TIME__); // <- changes EVERY upload
   Serial.println("--------------------------------------------------------------");
   i2sInit();
   buildSine();
