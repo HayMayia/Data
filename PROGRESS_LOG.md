@@ -31,14 +31,17 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   natively slow via elongated spellings ("Heeeelp! Heeeeelp, pleeeeease!", voice-02,
   1.49 s speech) + gentle 1.75× stretch → 2.81 s, RMS −8.1 dBFS, artifact delta +0.28%
   (clean). LESSON: keep stretch ≤ ~2×; make the source itself slow instead.
-- **Audio v7→v8 (18 Sep):** user twice reported "sound is the same" despite new files
-  → stale-file/upload ghost suspected (v5 was the last version user provably heard:
-  slow+cackle). v8 countermeasures: new filename help_voice_v8.h (compile FAILS if
-  absent), boot banner (voice version + __DATE__/__TIME__ compile stamp — changes
-  every upload), 2-beep 1760 Hz alarm intro before the voice (audibly impossible to
-  confuse), RMS pushed to −6.4 dBFS (gain 18/knee 0.30, 6.1% at cap), default
-  volume 15. Full zip SpeakerSayHelp_v8.zip on beep branch. PENDING: user to report
-  the boot banner text — that single line resolves where the ghost lives.
+- **🔔 REVELATION (18 Sep):** user had been judging audio via the PREVIEW WAV on the
+  COMPUTER — never uploaded anything after v5. Explains everything: v6/v7/v8 previews
+  share the same take+speed (only ~1 dB deltas) → "sound is the same" was CORRECT on
+  a computer; "weird on computer" = the speaker-mastered preview (18 dB compression
+  + presence EQ) sounds harsh on full-range speakers BY DESIGN — it's mastered for
+  the 2-inch driver + amp. Alarm beeps live in CODE, not in the preview.
+  → Added audio/help_preview_natural.wav (same speed, no mastering) for fair listening.
+  NEXT: user uploads SpeakerSayHelp_v8.zip to the actual board; success = beep-beep
+  + slow clean voice. (Earlier v8 countermeasures — new filename, boot banner with
+  compile stamp, alarm intro, RMS −6.4 dBFS, volume 15 — all still apply and are
+  exactly what makes the on-device test unambiguous.)
 - **Status (mid-Sep):** audio system DONE (loud+crisp "Help!" confirmed). Exams nearly
   over (only Computers left). Next session: fresh pads → v13 (clench → "Help!") → film.
 
