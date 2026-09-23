@@ -39,6 +39,12 @@ Updated: night of 5 Sep 2026 (speaker session, last one before exam week).
   the 2-inch driver + amp. Alarm beeps live in CODE, not in the preview.
   → Added audio/help_preview_natural.wav (same speed, no mastering) for fair listening.
   NEXT: user picks v10 variant by ear (computer previews), uploads that zip.
+- **Audio v11 (23 Sep):** user verdict on v10: good but ① only the word "HELP"
+  ② slight warble remains ③ 2.8x = "unnaturally slow, on purpose". v11: single
+  plain "HELP" take (all 6 single-word TTS takes ~0.32s regardless of spelling —
+  engine caps it) stretched only 1.8x → 0.77 s natural call pace, PV warble floor.
+  Own-voice instructions added to guide (chat path + offline path). Single-word
+  takes kept: audio/word_help1..6.wav (help6 = chosen, saved as help_single.wav).
 - **Audio v10 (18 Sep):** user: "words slower, not the silence" → implemented a pure-
   python PHASE VOCODER (FFT + phase propagation + Laroche-Dolson identity phase
   locking) — the professional time-stretch. Two variants built from the two healthy
