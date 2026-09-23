@@ -34,7 +34,7 @@
  *   to the chat and I'll convert it for you.
  */
 
-#include "help_voice_v9.h"   // v9 — see header for version.
+#include "help_voice_v11.h"  // v11 — single HELP, natural pace
                              // If this file is missing the compile FAILS on purpose —
                              // that means the sketch folder isn't the one you think.)
 
