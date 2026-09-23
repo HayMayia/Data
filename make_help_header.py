@@ -27,7 +27,9 @@ OUT_HDR = os.path.join(os.path.dirname(__file__), "SpeakerSayHelp_MAX98357A", "h
 PREVIEW = os.path.join(os.path.dirname(__file__), "audio", "help_enhanced.wav")
 PAD_SEC = 0.12
 STRETCH = 2.8      # v10: words stretched 2.8x by the PHASE VOCODER (clean)
-PAUSE_S = 0.0      # v10: no artificial pauses — the words themselves are slow
+PAUSE_S = 0.0      # no artificial pauses inside the phrase
+REPEAT   = 2       # v13: say the word twice (220 ms gap) = redundancy for strangers
+REPEAT_GAP = 0.22
 
 GAIN_DB = 12.0     # loudness makeup gain before the soft limiter
 KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression
@@ -303,8 +305,8 @@ def main():
         xs = insert_pauses(xs, sr, pause_s=PAUSE_S)
 
     # 3) clarity
-    xs = highpass(xs, 300.0, sr)   # v12: 2-inch speakers garble below this
-    xs = highshelf(xs, 2400.0, sr, +3.0)   # v12: gentler presence
+    xs = highpass(xs, 250.0, sr)   # v13: telephone-band clarity (250 Hz)
+    xs = highshelf(xs, 2200.0, sr, +6.0)   # v13: strong consonant presence (telephone band)
     xs = lowpass(xs, 6000.0, sr)    # v12: tames hash/harshness
 
     # 4) loudness v2: strong gain + deep soft-knee compression + tanh saturation
@@ -321,6 +323,9 @@ def main():
     pk = max(map(abs, lim)) or 1
     out = [max(-32767, min(32767, int(x/pk*0.99*32767))) for x in lim]
 
+    if REPEAT > 1:
+        gap = [0] * int(REPEAT_GAP * sr)
+        out = out + gap + out
     after = rms_db(out)
 
     with open(OUT_HDR, "w") as f:
