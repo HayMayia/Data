@@ -34,7 +34,7 @@
  *   to the chat and I'll convert it for you.
  */
 
-#include "help_voice_v11.h"  // v11 — single HELP, natural pace
+#include "help_voice_v12.h"  // v12 - clarity master for the 2-inch speaker
                              // If this file is missing the compile FAILS on purpose —
                              // that means the sketch folder isn't the one you think.)
 

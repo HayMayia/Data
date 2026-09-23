@@ -29,8 +29,8 @@ PAD_SEC = 0.12
 STRETCH = 2.8      # v10: words stretched 2.8x by the PHASE VOCODER (clean)
 PAUSE_S = 0.0      # v10: no artificial pauses — the words themselves are slow
 
-GAIN_DB = 18.0     # loudness makeup gain before the soft limiter
-KNEE    = 0.30     # soft-knee threshold (0..1) — lower = more compression
+GAIN_DB = 12.0     # loudness makeup gain before the soft limiter
+KNEE    = 0.35     # soft-knee threshold (0..1) — lower = more compression
 
 # ----------------------------------------------------------------------
 def highpass(xs, f0, fs, Q=0.707):
@@ -100,6 +100,16 @@ def time_stretch(xs, ratio, fs, grain_ms=30.0, search_ms=12.0):
     while res and abs(res[-1]) < 1e-4: res.pop()
     return res
 
+
+
+def lowpass(xs, f0, fs):
+    """one-pole low-pass: -3dB at f0, gently rolls off above (tames small-speaker hash)"""
+    a = 1.0 - math.exp(-2*math.pi*f0/fs)
+    y = 0.0; out = []
+    for x in xs:
+        y += a*(x-y)
+        out.append(y)
+    return out
 
 def insert_pauses(xs, sr, pause_s=0.55, valley_thresh=0.03):
     """v9 slowness method: split at near-silent valleys between words and insert
@@ -293,8 +303,9 @@ def main():
         xs = insert_pauses(xs, sr, pause_s=PAUSE_S)
 
     # 3) clarity
-    xs = highpass(xs, 170.0, sr)
-    xs = highshelf(xs, 2600.0, sr, +4.5)
+    xs = highpass(xs, 300.0, sr)   # v12: 2-inch speakers garble below this
+    xs = highshelf(xs, 2400.0, sr, +3.0)   # v12: gentler presence
+    xs = lowpass(xs, 6000.0, sr)    # v12: tames hash/harshness
 
     # 4) loudness v2: strong gain + deep soft-knee compression + tanh saturation
     g = 10**(GAIN_DB/20)
