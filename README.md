@@ -6,8 +6,8 @@
 
 | Word | File | Length | Source |
 |---|---|---|---|
-| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.52 s (×2) | user's recording + **P-burst surgery** (the natural take's final /p/ was unreleased → "HELL"; repaired with closure silence + synthesized 22 ms plosive burst, see audio/help_own_v3_pfix.wav) |
-| **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 2.08 s (×2) | user's recording (WATER.m4a) |
+| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.62 s (×2) | user's recording + **P-burst surgery v2** (final /p/ was unreleased → "HELL"; v1 graft was too quiet/narrow; v2 = gentle L fade + 65 ms closure + broadband 12 ms pop @45% + 70 ms aspiration — audio/help_own_v4_pfix2.wav) |
+| **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 1.65 s (×2) | user's recording + **T-sharpening** (the take had a ~95 ms dark retroflex-T gap + 155 ms rolled-R tail = muffled sound; surgery: 45 ms closure + bright 16 ms alveolar click @30% + R tail trimmed 80 ms — audio/water_own_v2_sharp.wav) |
 
 Both are processed with the same chain: silence trim → telephone-band clarity (250 Hz HPF, +6 dB @ 2.2 kHz presence, 6 kHz LPF) → gentle loudness (12 dB, soft knee) → said twice (220 ms gap).
 
