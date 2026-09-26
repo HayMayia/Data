@@ -6,7 +6,7 @@
 
 | Word | File | Length | Source |
 |---|---|---|---|
-| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.62 s (×2) | user's recording + **P-burst surgery v2** (final /p/ was unreleased → "HELL"; v1 graft was too quiet/narrow; v2 = gentle L fade + 65 ms closure + broadband 12 ms pop @45% + 70 ms aspiration — audio/help_own_v4_pfix2.wav) |
+| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.53 s (×2) | user's re-recording (HELP_V3 take, 26 Sep — louder, 71% peak) + **P-burst surgery v3 = v2 params on the new take** (the new take's /p/ was also unreleased — L faded to noise floor by 1.23 s with only an 8% blip at 1.35 s; surgery: gentle L fade 25 ms + 65 ms closure + broadband 12 ms pop 300–5500 Hz @45% of word peak + 70 ms aspiration 300–1500 Hz @15% — audio/help_own_v5_pfix3.wav) |
 | **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 1.65 s (×2) | user's recording + **T-sharpening** (the take had a ~95 ms dark retroflex-T gap + 155 ms rolled-R tail = muffled sound; surgery: 45 ms closure + bright 16 ms alveolar click @30% + R tail trimmed 80 ms — audio/water_own_v2_sharp.wav) |
 
 Both are processed with the same chain: silence trim → telephone-band clarity (250 Hz HPF, +6 dB @ 2.2 kHz presence, 6 kHz LPF) → gentle loudness (12 dB, soft knee) → said twice (220 ms gap).
@@ -28,6 +28,9 @@ python3 make_word_header.py your_recording.wav YES
 
 ## Audio previews
 
-- `audio/preview_help_own_natural.wav` / `audio/preview_water_own_natural.wav` — natural, for computer listening
+- `audio/preview_help_pfix3_natural.wav` — HELP from the HELP_V3 take + pop surgery (current)
+- `audio/preview_help_v3take_natural.wav` — the HELP_V3 take processed, natural ending (no surgery) — for A/B comparison
+- `audio/preview_water_sharp_natural.wav` — WATER, T-sharpened (current)
 - `audio/master_help_device.wav` / `audio/master_water_device.wav` — exactly what the speaker plays
-- `audio/help_own_v2.wav` / `audio/water_own.wav` — the original takes (keep as masters)
+- `audio/help_own_v5_pfix3.wav` — the surgered HELP word (single pass, pre-header)
+- older takes/surgeries kept for history (`help_own_v2/v3_pfix/v4_pfix2`, `water_own/_v2_sharp`)
