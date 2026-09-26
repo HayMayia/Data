@@ -22,15 +22,12 @@ Wiring: MAX98357A VIN→VIN(5V), GND→GND, BCLK→GPIO27, LRC→GPIO26, DIN→G
 ## Add more words (YES / NO / PAIN ...)
 
 ```bash
-python3 make_word_header.py your_recording.wav YES
+python3 make_word_header.py your_recording.wav YES --natural
 # put YES_voice.h in the sketch folder, add #include + one sayYES() block
 ```
 
 ## Audio previews
 
-- `audio/preview_help_pfix3_natural.wav` — HELP from the HELP_V3 take + pop surgery (current)
-- `audio/preview_help_v3take_natural.wav` — the HELP_V3 take processed, natural ending (no surgery) — for A/B comparison
-- `audio/preview_water_sharp_natural.wav` — WATER, T-sharpened (current)
+- `audio/preview_help_natural.wav` / `audio/preview_water_natural.wav` — current builds: as recorded, natural (computer listening)
 - `audio/master_help_device.wav` / `audio/master_water_device.wav` — exactly what the speaker plays
-- `audio/help_own_v5_pfix3.wav` — the surgered HELP word (single pass, pre-header)
-- older takes/surgeries kept for history (`help_own_v2/v3_pfix/v4_pfix2`, `water_own/_v2_sharp`)
+- earlier surgery experiments kept for history only, not in the build (`help_own_v4_pfix2`, `help_own_v5_pfix3`, `water_own_v2_sharp`, previews)

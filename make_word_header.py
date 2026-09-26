@@ -59,7 +59,7 @@ def lowpass(xs, f0, fs):
         out.append(y)
     return out
 
-def build(in_wav, word, stretch=1.0, repeat=REPEAT):
+def build(in_wav, word, stretch=1.0, repeat=REPEAT, natural=False):
     w = wave.open(in_wav, "rb")
     nch, sw, sr, n = w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getnframes()
     if sw != 2: sys.exit("ERROR: WAV must be 16-bit.")
@@ -105,17 +105,19 @@ def build(in_wav, word, stretch=1.0, repeat=REPEAT):
 def main():
     if len(sys.argv) < 3:
         print(__doc__); sys.exit(1)
-    in_wav, word = sys.argv[1], sys.argv[2].upper()
-    stretch = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
-    repeat  = int(sys.argv[4]) if len(sys.argv) > 4 else REPEAT
-    out, sr = build(in_wav, word, stretch, repeat)
+    natural = "--natural" in sys.argv
+    argv = [a for a in sys.argv[1:] if a != "--natural"]
+    in_wav, word = argv[0], argv[1].upper()
+    stretch = float(argv[2]) if len(argv) > 2 else 1.0
+    repeat  = int(argv[3]) if len(argv) > 3 else REPEAT
+    out, sr = build(in_wav, word, stretch, repeat, natural)
     hdr = "%s_voice.h" % word.lower()
     with open(hdr, "w") as f:
         f.write("// VocalBridge Final_V1 — '%s' voice (user's own recording: %s)\n" % (word, os.path.basename(in_wav)))
         f.write("// %d Hz, mono, 16-bit PCM, %d samples (%.2f s). Do not edit by hand.\n" % (sr, len(out), len(out)/sr))
-        f.write("// Regenerate: python3 make_word_header.py %s %s\n" % (os.path.basename(in_wav), word))
+        f.write("// Regenerate: python3 make_word_header.py %s %s%s\n" % (os.path.basename(in_wav), word, " --natural" if natural else ""))
         f.write("#pragma once\n#include <Arduino.h>\n\n")
-        f.write('#define %s_VOICE_VERSION "Final_V1 - %s - own voice x%d"\n\n' % (word, word, repeat))
+        f.write('#define %s_VOICE_VERSION "Final_V1 - %s - own voice%s x%d"\n\n' % (word, word, " NATURAL" if natural else "", repeat))
         f.write("static const uint32_t %s_SAMPLE_RATE = %d;\n" % (word, sr))
         f.write("static const uint32_t %s_NUM_SAMPLES = %d;\n" % (word, len(out)))
         f.write("static const int16_t %s_PCM[] = {\n" % word)
