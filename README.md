@@ -6,7 +6,7 @@
 
 | Word | File | Length | Source |
 |---|---|---|---|
-| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.48 s (×2) | user's recording (HELP_V2.m4a) |
+| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.52 s (×2) | user's recording + **P-burst surgery** (the natural take's final /p/ was unreleased → "HELL"; repaired with closure silence + synthesized 22 ms plosive burst, see audio/help_own_v3_pfix.wav) |
 | **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 2.08 s (×2) | user's recording (WATER.m4a) |
 
 Both are processed with the same chain: silence trim → telephone-band clarity (250 Hz HPF, +6 dB @ 2.2 kHz presence, 6 kHz LPF) → gentle loudness (12 dB, soft knee) → said twice (220 ms gap).
