@@ -1,54 +1,33 @@
-# BEEP 🔊
+# Final_V1 🗣️
 
-ESP32 + MAX98357A I2S amplifier + speaker — from a simple **beep test** to a device that **speaks "Help!"** with a real voice stored on the ESP32 itself (no SD card, no MP3 module).
+**VocalBridge's voice — the user's own recordings, stored on the ESP32 itself.** No SD card, no MP3 module: the audio is compiled into the sketch as C arrays and played through the MAX98357A I2S amplifier.
 
-Built for the **VocalBridge** project (EMG muscle-sensor wearable that lets a user call for help with a muscle squeeze → the device speaks).
+## Words included
 
-## Quick start
+| Word | File | Length | Source |
+|---|---|---|---|
+| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.48 s (×2) | user's recording (HELP_V2.m4a) |
+| **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 2.08 s (×2) | user's recording (WATER.m4a) |
 
-1. **Wire it** (5 wires + speaker):
+Both are processed with the same chain: silence trim → telephone-band clarity (250 Hz HPF, +6 dB @ 2.2 kHz presence, 6 kHz LPF) → gentle loudness (12 dB, soft knee) → said twice (220 ms gap).
 
-   | MAX98357A | ESP32 |
-   |---|---|
-   | VIN | VIN (5V) |
-   | GND | GND |
-   | BCLK | GPIO27 |
-   | LRC | GPIO26 |
-   | DIN | GPIO25 |
-   | + / − | speaker wires |
+## Use
 
-2. Open a sketch **from inside its folder** (Arduino IDE rule) → Board: **ESP32 Dev Module** → Upload.
-3. No libraries needed. Works on esp32 core v2.x and v3.x (auto-detected).
+1. Download/clone, open `SpeakerSayWords_MAX98357A/SpeakerSayWords_MAX98357A.ino` in Arduino IDE
+2. Board: ESP32 Dev Module → Upload (no libraries needed)
+3. Serial Monitor @ 115200: `h` = HELP · `w` = WATER · `b` = beep · `l` = loop · `+`/`-` = volume
 
-## The sketches (in the order you'd use them)
+Wiring: MAX98357A VIN→VIN(5V), GND→GND, BCLK→GPIO27, LRC→GPIO26, DIN→GPIO25; speaker on +/− (soldered!).
 
-| Folder | What it does |
-|---|---|
-| `SpeakerTest_MAX98357A/` | **Start here.** Clean 256-step sine chime (beep-beep-beeeep) every 3 s — proves the wiring. Commands: `b` beep, `+`/`-` volume |
-| `SpeakerWireDoctor/` | Wiring broken? It cycles 6 BCLK/LRC/DIN pin arrangements **in software** (press `m`, listen) — names your actual wiring so you don't have to rewire to diagnose |
-| `SpeakerSayHelp_MAX98357A/` | **The goal.** Says **"Help!"** 2 s after boot — the voice is a real audio clip compiled into the ESP32 (`help_sound.h`). Commands: `h` say it, `2` twice, `l` loop (great for filming), `+`/`-` volume, `b` beep |
-| `SpeakerTest_DFPlayer/` | Same tests for a DFPlayer Mini + microSD setup (alternate hardware plan) |
-| `ClenchDetector_v12_SPEAKER/` | Clench detector (v11 state machine) + DFPlayer "Help" — full demo for the DFPlayer path |
-| `SpeakerTest_Tone_Amp/` | Beep test for plain analog amps (PAM8403/LM386). ⚠️ NOT for MAX98357A (digital-only input) |
-
-## Put your own voice in it
+## Add more words (YES / NO / PAIN ...)
 
 ```bash
-# record "Help!", save as audio/help.wav (mono WAV), then:
-python3 make_help_header.py      # regenerates help_sound.h
-# re-upload the SpeakerSayHelp sketch
+python3 make_word_header.py your_recording.wav YES
+# put YES_voice.h in the sketch folder, add #include + one sayYES() block
 ```
 
-The script trims silence, normalizes loudness, and writes the C array. `audio/help_clean.wav` is a preview of exactly what the device says.
+## Audio previews
 
-## Docs
-
-- **`SPEAKER_TEST_GUIDE.md`** — full wiring diagrams, troubleshooting table (including the "buzz splitter test" for finding dead wires), and the EMG noise rules
-- **`PROGRESS_LOG.md`** — project state and next steps
-
-## Notes learned the hard way
-
-- **Volume:** keep it ~10–13 on the default 9 dB gain — higher clips into fuzz on a small speaker
-- **I2S needs all 3 signal wires at once** — testing one wire at a time just amplifies noise (sounds like a broken buzzer; that's normal)
-- **Solder the joints** for the final build — a loose speaker twist-joint sounds like a wiring fault
-- Speaker wires stay **away from EMG electrode wires** — speaker current can inject noise into the sensor
+- `audio/preview_help_own_natural.wav` / `audio/preview_water_own_natural.wav` — natural, for computer listening
+- `audio/master_help_device.wav` / `audio/master_water_device.wav` — exactly what the speaker plays
+- `audio/help_own_v2.wav` / `audio/water_own.wav` — the original takes (keep as masters)
