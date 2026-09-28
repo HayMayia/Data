@@ -1,10 +1,10 @@
-// VocalBridge Final_V1 — 'HELP' voice (user's own recording: help_own_v3_word.wav)
+// VocalBridge Voice_Final-V5 — 'HELP' voice (user's own recording: help_own_v3_word.wav)
 // 24000 Hz, mono, 16-bit PCM, 15840 samples (0.66 s). Do not edit by hand.
 // Regenerate: python3 make_word_header.py help_own_v3_word.wav HELP --natural
 #pragma once
 #include <Arduino.h>
 
-#define HELP_VOICE_VERSION "Final_V1 - HELP - own voice NATURAL x1"
+#define HELP_VOICE_VERSION "Voice_Final-V5 - HELP - own voice NATURAL x1"
 
 static const uint32_t HELP_SAMPLE_RATE = 24000;
 static const uint32_t HELP_NUM_SAMPLES = 15840;

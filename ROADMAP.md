@@ -1,6 +1,6 @@
 # VocalBridge — Vocabulary & Update Roadmap
 
-## Phase 1 (current): factory vocabulary — 4 words, own voice, NATURAL (as recorded)
+## Phase 1 (SHIPPED 28 Sep as Voice_Final-V5): factory vocabulary — 4 words, own voice, NATURAL (as recorded)
 - [x] HELP  — HELP_V3 take, natural build done (help_voice.h, 0.66 s, said once)
 - [x] WATER — original take, natural build done (water_voice.h, 0.93 s, said once)
 - [x] YES   — built 28 Sep from YES.m4a (natural, 0.90 s, said once)
@@ -25,6 +25,7 @@ remind the user to start Phase 2.
 - PAIN recording lives ONLY on the sender ESP32 (never preloaded on the device) — keeps the demo honest.
 - No SD card needed: sender stores the update in its own flash (SPIFFS/LittleFS partition).
 - Fallback (only if ESP-NOW proves unreliable): Wi-Fi OTA via HTTPUpdate.
+- The PAIN update ships as **Voice_Final-V6** — boot screen shows V5 before, V6 after: visible proof the update is real.
 - Needs: 2nd ESP32, OTA partition scheme (Tools > Partition Scheme: "Minimal SPIFFS (Large APPS with OTA)"
   or similar 2-slot scheme) — check before first flash.
 
@@ -32,3 +33,4 @@ remind the user to start Phase 2.
 - Zero-context intelligibility (mother test) is the bar for every word.
 - Never ship unverified zips; every build ships natural preview + device master.
 - User tests every build on the real speaker before it counts.
+- Firmware versions in sequence (user directive 28 Sep): Voice_Final-V5 (current) → V6 → V7 … Every build prints its version at boot.
