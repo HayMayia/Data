@@ -24,10 +24,10 @@
  *      copy one playWord() block, pick a key. Done.
  */
 
-#include "help_voice.h"     // your voice: HELP  x2
-#include "water_voice.h"    // your voice: WATER x2
-#include "yes_voice.h"      // your voice: YES   x2
-#include "no_voice.h"       // your voice: NO    x2
+#include "help_voice.h"     // your voice: HELP  x1 (said once)
+#include "water_voice.h"    // your voice: WATER x1 (said once)
+#include "yes_voice.h"      // your voice: YES   x1 (said once)
+#include "no_voice.h"       // your voice: NO    x1 (said once)
 
 // ---------------- WIRING CONFIG ----------------
 const int PIN_BCLK = 27;
@@ -188,8 +188,6 @@ void setup() {
   Serial.println("----------------------------------------------------------");
   Serial.print("HELP  : ");  Serial.println(HELP_VOICE_VERSION);
   Serial.print("WATER : ");  Serial.println(WATER_VOICE_VERSION);
-  Serial.print("YES   : ");  Serial.println(YES_VOICE_VERSION);
-  Serial.print("NO    : ");  Serial.println(NO_VOICE_VERSION);
   Serial.print("YES   : ");  Serial.println(YES_VOICE_VERSION);
   Serial.print("NO    : ");  Serial.println(NO_VOICE_VERSION);
   Serial.print("COMPILED: "); Serial.print(__DATE__); Serial.print(" "); Serial.println(__TIME__);
