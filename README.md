@@ -6,16 +6,20 @@
 
 | Word | File | Length | Source |
 |---|---|---|---|
-| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.53 s (×2) | user's re-recording (HELP_V3 take, 26 Sep — louder, 71% peak) + **P-burst surgery v3 = v2 params on the new take** (the new take's /p/ was also unreleased — L faded to noise floor by 1.23 s with only an 8% blip at 1.35 s; surgery: gentle L fade 25 ms + 65 ms closure + broadband 12 ms pop 300–5500 Hz @45% of word peak + 70 ms aspiration 300–1500 Hz @15% — audio/help_own_v5_pfix3.wav) |
-| **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 1.65 s (×2) | user's recording + **T-sharpening** (the take had a ~95 ms dark retroflex-T gap + 155 ms rolled-R tail = muffled sound; surgery: 45 ms closure + bright 16 ms alveolar click @30% + R tail trimmed 80 ms — audio/water_own_v2_sharp.wav) |
+| **HELP** | `SpeakerSayWords_MAX98357A/help_voice.h` | 1.54 s (×2) | user's re-recording (HELP_V3 take, 26 Sep) — **natural, as recorded** (no surgery: user directive 26 Sep — "don't alter a thing") |
+| **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 2.08 s (×2) | user's original take (WATER.m4a) — **natural, as recorded** (T-sharpening removed per user directive 26 Sep) |
+| **YES** | `SpeakerSayWords_MAX98357A/yes_voice.h` | 2.01 s (×2) | user's recording (YES.m4a, 28 Sep) — **natural, as recorded** |
+| **NO** | `SpeakerSayWords_MAX98357A/no_voice.h` | 1.89 s (×2) | user's recording (NO.m4a, 28 Sep) — **natural, as recorded** |
 
-Both are processed with the same chain: silence trim → telephone-band clarity (250 Hz HPF, +6 dB @ 2.2 kHz presence, 6 kHz LPF) → gentle loudness (12 dB, soft knee) → said twice (220 ms gap).
+PAIN is **not** on the device — it is reserved for the Phase-2 over-the-air update demo (see ROADMAP.md).
+
+All four are built **natural** (`--natural` mode, added 26 Sep): the recording stays exactly as spoken — no EQ, no compression, no phonetic surgery. Only silence is trimmed and peak volume matched, then the word is said twice (220 ms gap).
 
 ## Use
 
 1. Download/clone, open `SpeakerSayWords_MAX98357A/SpeakerSayWords_MAX98357A.ino` in Arduino IDE
 2. Board: ESP32 Dev Module → Upload (no libraries needed)
-3. Serial Monitor @ 115200: `h` = HELP · `w` = WATER · `b` = beep · `l` = loop · `+`/`-` = volume
+3. Serial Monitor @ 115200: `h` = HELP · `w` = WATER · `y` = YES · `n` = NO · `b` = beep · `l` = loop · `+`/`-` = volume
 
 Wiring: MAX98357A VIN→VIN(5V), GND→GND, BCLK→GPIO27, LRC→GPIO26, DIN→GPIO25; speaker on +/− (soldered!).
 
@@ -28,6 +32,6 @@ python3 make_word_header.py your_recording.wav YES --natural
 
 ## Audio previews
 
-- `audio/preview_help_natural.wav` / `audio/preview_water_natural.wav` — current builds: as recorded, natural (computer listening)
+- `audio/preview_help_natural.wav` / `audio/preview_water_natural.wav` / `audio/preview_yes_natural.wav` / `audio/preview_no_natural.wav` — current builds: as recorded, natural (computer listening)
 - `audio/master_help_device.wav` / `audio/master_water_device.wav` — exactly what the speaker plays
 - earlier surgery experiments kept for history only, not in the build (`help_own_v4_pfix2`, `help_own_v5_pfix3`, `water_own_v2_sharp`, previews)

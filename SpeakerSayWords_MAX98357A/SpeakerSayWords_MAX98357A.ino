@@ -1,7 +1,7 @@
 /*
  * VocalBridge Final_V1 — SPEAKER SAYS WORDS (your own voice)
  * -----------------------------------------------------------
- * Two words on-chip, in YOUR voice: HELP and WATER.
+ * Four words on-chip, in YOUR voice: HELP, WATER, YES, NO.
  * No SD card, no DFPlayer. More words = record + make_word_header.py.
  *
  * Board:  ESP32 Dev Module        Baud: 115200
@@ -13,18 +13,21 @@
  *
  * COMMANDS (Serial Monitor 115200):
  *   h    say "HELP!"          w    say "WATER!"
+ *   y    say "YES!"           n    say "NO!"
  *   b    beep chime           l    loop HELP every 3 s (filming)
  *   + -  volume               i    info
  *
- * HOW TO ADD MORE WORDS (YES / NO / PAIN ...):
+ * HOW TO ADD MORE WORDS (PAIN is planned as a future over-the-air update):
  *   1. Record the word (quiet room, phone 15-20 cm, natural calling pace)
- *   2. Convert to WAV, then: python3 make_word_header.py recording.wav YES
- *   3. Put YES_voice.h in this folder, add #include "yes_voice.h" below,
+ *   2. Convert to WAV, then: python3 make_word_header.py recording.wav PAIN --natural
+ *   3. Put pain_voice.h in this folder, add #include "pain_voice.h" below,
  *      copy one playWord() block, pick a key. Done.
  */
 
 #include "help_voice.h"     // your voice: HELP  x2
 #include "water_voice.h"    // your voice: WATER x2
+#include "yes_voice.h"      // your voice: YES   x2
+#include "no_voice.h"       // your voice: NO    x2
 
 // ---------------- WIRING CONFIG ----------------
 const int PIN_BCLK = 27;
@@ -140,12 +143,17 @@ void playAlertBeeps() {
 
 void sayHELP()  { playAlertBeeps(); playClip(HELP_PCM,  HELP_NUM_SAMPLES,  HELP_SAMPLE_RATE); }
 void sayWATER() { playAlertBeeps(); playClip(WATER_PCM, WATER_NUM_SAMPLES, WATER_SAMPLE_RATE); }
+void sayYES()   { playAlertBeeps(); playClip(YES_PCM,   YES_NUM_SAMPLES,   YES_SAMPLE_RATE); }
+void sayNO()    { playAlertBeeps(); playClip(NO_PCM,    NO_NUM_SAMPLES,    NO_SAMPLE_RATE); }
+void sayYES()   { playAlertBeeps(); playClip(YES_PCM,   YES_NUM_SAMPLES,   YES_SAMPLE_RATE); }
+void sayNO()    { playAlertBeeps(); playClip(NO_PCM,    NO_NUM_SAMPLES,    NO_SAMPLE_RATE); }
 
 // ----------------------------------------------------------------------
 void printHelp() {
   Serial.println();
   Serial.println("------------- SPEAKER SAYS WORDS — commands -------------");
   Serial.println("  h   say 'HELP!'         w   say 'WATER!'");
+  Serial.println("  y   say 'YES!'          n   say 'NO!'");
   Serial.println("  b   beep                l   loop HELP every 3 s");
   Serial.println("  + / -  volume           i   info");
   Serial.println("----------------------------------------------------------");
@@ -156,6 +164,8 @@ void handleChar(char c) {
   if (c == '\r' || c == '\n' || c == ' ') return;
   if (c == 'h' || c == 'H') { Serial.println(">> 'HELP!'");  sayHELP(); }
   else if (c == 'w' || c == 'W') { Serial.println(">> 'WATER!'"); sayWATER(); }
+  else if (c == 'y' || c == 'Y') { Serial.println(">> 'YES!'");   sayYES(); }
+  else if (c == 'n' || c == 'N') { Serial.println(">> 'NO!'");    sayNO(); }
   else if (c == 'b' || c == 'B') { Serial.println(">> beep"); playTone(880, 150); delay(120); playTone(440, 450); }
   else if (c == 'l' || c == 'L') {
     loopMode = !loopMode;
@@ -165,7 +175,9 @@ void handleChar(char c) {
   else if (c == '-') { if (volume > 0)  volume--; Serial.print(">> volume "); Serial.println(volume); }
   else if (c == 'i' || c == 'I') {
     Serial.print(">> HELP: ");  Serial.print(HELP_VOICE_VERSION);
-    Serial.print(" | WATER: "); Serial.println(WATER_VOICE_VERSION);
+    Serial.print(" | WATER: "); Serial.print(WATER_VOICE_VERSION);
+    Serial.print(" | YES: ");   Serial.print(YES_VOICE_VERSION);
+    Serial.print(" | NO: ");    Serial.println(NO_VOICE_VERSION);
   }
   else { Serial.print("?? '"); Serial.write(c); Serial.println("'"); }
 }
@@ -178,6 +190,10 @@ void setup() {
   Serial.println("----------------------------------------------------------");
   Serial.print("HELP  : ");  Serial.println(HELP_VOICE_VERSION);
   Serial.print("WATER : ");  Serial.println(WATER_VOICE_VERSION);
+  Serial.print("YES   : ");  Serial.println(YES_VOICE_VERSION);
+  Serial.print("NO    : ");  Serial.println(NO_VOICE_VERSION);
+  Serial.print("YES   : ");  Serial.println(YES_VOICE_VERSION);
+  Serial.print("NO    : ");  Serial.println(NO_VOICE_VERSION);
   Serial.print("COMPILED: "); Serial.print(__DATE__); Serial.print(" "); Serial.println(__TIME__);
   i2sInit();
   buildSine();
