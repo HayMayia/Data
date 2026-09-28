@@ -1,10 +1,11 @@
 # VocalBridge — Vocabulary & Update Roadmap
 
 ## Phase 1 (current): factory vocabulary — 4 words, own voice, NATURAL (as recorded)
-- [x] HELP  — HELP_V3 take, natural build done (help_voice.h, 1.54 s x2)
-- [x] WATER — original take, natural build done (water_voice.h, 2.08 s x2)
-- [x] YES   — built 28 Sep from YES.m4a (natural, 2.01 s x2)
-- [x] NO    — built 28 Sep from NO.m4a (natural, 1.89 s x2)
+- [x] HELP  — HELP_V3 take, natural build done (help_voice.h, 0.66 s, said once)
+- [x] WATER — original take, natural build done (water_voice.h, 0.93 s, said once)
+- [x] YES   — built 28 Sep from YES.m4a (natural, 0.90 s, said once)
+- [x] NO    — built 28 Sep from NO.m4a (natural, 0.83 s, said once)
+- [x] 28 Sep — words now play ONCE per key press (user request); accepted audio samples unchanged
 
 Recording protocol: quiet room, phone 15–20 cm, natural calling pace,
 ~1 s silence around the word, one word per file -> Drive.

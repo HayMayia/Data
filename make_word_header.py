@@ -22,7 +22,7 @@ import wave, struct, os, sys, math
 PAD_SEC  = 0.12
 GAIN_DB  = 12.0
 KNEE     = 0.35
-REPEAT   = 2
+REPEAT   = 1     # words are said ONCE per key press (x2 = early builds, 26-28 Sep)
 GAP_S    = 0.22
 
 # ---------------- filters ----------------
