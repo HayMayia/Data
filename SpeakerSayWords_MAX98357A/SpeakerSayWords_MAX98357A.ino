@@ -1,5 +1,5 @@
 /*
- * VocalBridge Final_V1 — SPEAKER SAYS WORDS (your own voice)
+ * VocalBridge Voice_Final-V5 — SPEAKER SAYS WORDS (your own voice)
  * -----------------------------------------------------------
  * Four words on-chip, in YOUR voice: HELP, WATER, YES, NO.
  * No SD card, no DFPlayer. More words = record + make_word_header.py.
@@ -184,7 +184,7 @@ void setup() {
   Serial.begin(BAUD);
   delay(800);
   Serial.println();
-  Serial.println("VocalBridge Final_V1 — SPEAKER SAYS WORDS (your own voice)");
+  Serial.println("VocalBridge Voice_Final-V5 — SPEAKER SAYS WORDS (your own voice)");
   Serial.println("----------------------------------------------------------");
   Serial.print("HELP  : ");  Serial.println(HELP_VOICE_VERSION);
   Serial.print("WATER : ");  Serial.println(WATER_VOICE_VERSION);

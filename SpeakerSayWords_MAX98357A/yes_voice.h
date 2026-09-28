@@ -1,10 +1,10 @@
-// VocalBridge Final_V1 — 'YES' voice (user's own recording: yes_own.wav)
+// VocalBridge Voice_Final-V5 — 'YES' voice (user's own recording: yes_own.wav)
 // 24000 Hz, mono, 16-bit PCM, 21513 samples (0.90 s). Do not edit by hand.
 // Regenerate: python3 make_word_header.py yes_own.wav YES --natural
 #pragma once
 #include <Arduino.h>
 
-#define YES_VOICE_VERSION "Final_V1 - YES - own voice NATURAL x1"
+#define YES_VOICE_VERSION "Voice_Final-V5 - YES - own voice NATURAL x1"
 
 static const uint32_t YES_SAMPLE_RATE = 24000;
 static const uint32_t YES_NUM_SAMPLES = 21513;

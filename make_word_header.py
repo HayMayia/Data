@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VocalBridge Final_V1 — build any word's voice header from a recording
+VocalBridge firmware — build any word's voice header from a recording
 ---------------------------------------------------------------------
 Usage:
     python3 make_word_header.py <recording.wav> <WORD> [stretch] [repeat]
@@ -22,6 +22,7 @@ import wave, struct, os, sys, math
 PAD_SEC  = 0.12
 GAIN_DB  = 12.0
 KNEE     = 0.35
+FIRMWARE_VERSION = "Voice_Final-V5"   # version shown on boot screen + in every header; next build = V6
 REPEAT   = 1     # words are said ONCE per key press (x2 = early builds, 26-28 Sep)
 GAP_S    = 0.22
 
@@ -113,11 +114,11 @@ def main():
     out, sr = build(in_wav, word, stretch, repeat, natural)
     hdr = "%s_voice.h" % word.lower()
     with open(hdr, "w") as f:
-        f.write("// VocalBridge Final_V1 — '%s' voice (user's own recording: %s)\n" % (word, os.path.basename(in_wav)))
+        f.write("// VocalBridge %s — '%s' voice (user's own recording: %s)\n" % (FIRMWARE_VERSION, word, os.path.basename(in_wav)))
         f.write("// %d Hz, mono, 16-bit PCM, %d samples (%.2f s). Do not edit by hand.\n" % (sr, len(out), len(out)/sr))
         f.write("// Regenerate: python3 make_word_header.py %s %s%s\n" % (os.path.basename(in_wav), word, " --natural" if natural else ""))
         f.write("#pragma once\n#include <Arduino.h>\n\n")
-        f.write('#define %s_VOICE_VERSION "Final_V1 - %s - own voice%s x%d"\n\n' % (word, word, " NATURAL" if natural else "", repeat))
+        f.write('#define %s_VOICE_VERSION "%s - %s - own voice%s x%d"\n\n' % (word, FIRMWARE_VERSION, word, " NATURAL" if natural else "", repeat))
         f.write("static const uint32_t %s_SAMPLE_RATE = %d;\n" % (word, sr))
         f.write("static const uint32_t %s_NUM_SAMPLES = %d;\n" % (word, len(out)))
         f.write("static const int16_t %s_PCM[] = {\n" % word)

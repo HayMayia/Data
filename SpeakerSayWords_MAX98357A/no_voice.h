@@ -1,10 +1,10 @@
-// VocalBridge Final_V1 — 'NO' voice (user's own recording: no_own.wav)
+// VocalBridge Voice_Final-V5 — 'NO' voice (user's own recording: no_own.wav)
 // 24000 Hz, mono, 16-bit PCM, 20033 samples (0.83 s). Do not edit by hand.
 // Regenerate: python3 make_word_header.py no_own.wav NO --natural
 #pragma once
 #include <Arduino.h>
 
-#define NO_VOICE_VERSION "Final_V1 - NO - own voice NATURAL x1"
+#define NO_VOICE_VERSION "Voice_Final-V5 - NO - own voice NATURAL x1"
 
 static const uint32_t NO_SAMPLE_RATE = 24000;
 static const uint32_t NO_NUM_SAMPLES = 20033;

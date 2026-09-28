@@ -1,10 +1,10 @@
-// VocalBridge Final_V1 — 'WATER' voice (user's own recording: water_own.wav)
+// VocalBridge Voice_Final-V5 — 'WATER' voice (user's own recording: water_own.wav)
 // 24000 Hz, mono, 16-bit PCM, 22374 samples (0.93 s). Do not edit by hand.
 // Regenerate: python3 make_word_header.py water_own.wav WATER --natural
 #pragma once
 #include <Arduino.h>
 
-#define WATER_VOICE_VERSION "Final_V1 - WATER - own voice NATURAL x1"
+#define WATER_VOICE_VERSION "Voice_Final-V5 - WATER - own voice NATURAL x1"
 
 static const uint32_t WATER_SAMPLE_RATE = 24000;
 static const uint32_t WATER_NUM_SAMPLES = 22374;

@@ -1,4 +1,4 @@
-# Final_V1 🗣️
+# Voice_Final-V5 🗣️
 
 **VocalBridge's voice — the user's own recordings, stored on the ESP32 itself.** No SD card, no MP3 module: the audio is compiled into the sketch as C arrays and played through the MAX98357A I2S amplifier.
 
@@ -10,6 +10,15 @@
 | **WATER** | `SpeakerSayWords_MAX98357A/water_voice.h` | 0.93 s | user's original take (WATER.m4a) — **natural, as recorded** (T-sharpening removed per user directive 26 Sep) |
 | **YES** | `SpeakerSayWords_MAX98357A/yes_voice.h` | 0.90 s | user's recording (YES.m4a, 28 Sep) — **natural, as recorded** |
 | **NO** | `SpeakerSayWords_MAX98357A/no_voice.h` | 0.83 s | user's recording (NO.m4a, 28 Sep) — **natural, as recorded** |
+
+## Version history
+
+- **Final_V1** (26 Sep) — first build: HELP + WATER, each said twice
+- (28 Sep, interim) — added YES + NO, still said twice
+- **Voice_Final-V5** (28 Sep, **current**) — 4 words, each said **once**; version shown on the boot screen
+- Next: **Voice_Final-V6** — the Phase-2 PAIN update, delivered over the air. Boot screen changing V5 → V6 is the visible proof the firmware genuinely changed.
+
+(Numbering chosen by user, 28 Sep: current = V5, next = V6.)
 
 PAIN is **not** on the device — it is reserved for the Phase-2 over-the-air update demo (see ROADMAP.md).
 
