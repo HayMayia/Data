@@ -145,8 +145,6 @@ void sayHELP()  { playAlertBeeps(); playClip(HELP_PCM,  HELP_NUM_SAMPLES,  HELP_
 void sayWATER() { playAlertBeeps(); playClip(WATER_PCM, WATER_NUM_SAMPLES, WATER_SAMPLE_RATE); }
 void sayYES()   { playAlertBeeps(); playClip(YES_PCM,   YES_NUM_SAMPLES,   YES_SAMPLE_RATE); }
 void sayNO()    { playAlertBeeps(); playClip(NO_PCM,    NO_NUM_SAMPLES,    NO_SAMPLE_RATE); }
-void sayYES()   { playAlertBeeps(); playClip(YES_PCM,   YES_NUM_SAMPLES,   YES_SAMPLE_RATE); }
-void sayNO()    { playAlertBeeps(); playClip(NO_PCM,    NO_NUM_SAMPLES,    NO_SAMPLE_RATE); }
 
 // ----------------------------------------------------------------------
 void printHelp() {
