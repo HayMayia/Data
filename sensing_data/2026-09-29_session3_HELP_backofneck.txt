@@ -916,3 +916,10 @@ raw:1690,env:698,peak:813,pads:1,thresh:1200  [t=446.75s]
 #   Words spoken <~2 s apart can merge into one alert (1.5 s refractory).
 #   Calibrated levels on session-2 bad-pads log (664/764): 0 false fires.
 # Chart: 2026-09-29_session3_neck_vs_session1_collarbone_chart.png
+# --- follow-up (2026-09-29, user report) ---
+# ROOT CAUSE FOUND BY USER: the RL (green, back-of-neck) pad was NOT pressed on
+# tightly during this session. Pressing it firmly -> V1.4 alerted on spoken HELP.
+# So the weak session-3 signal (564-854) was partly LOOSE CONTACT, not only placement:
+# the neck-vs-collarbone "2x weaker" comparison is an underestimate of the neck spot.
+# Habit adopted: press every pad 10 s before recording; if alerts stop, press pads first.
+# (The single pads:0 blip at t=435.75 was the same pad losing contact.)
