@@ -1,20 +1,29 @@
 # Pad placement — speech muscle recording (AD8232)
 
-Match the label on your sensor cable: **RA**, **LA**, **RL**.
-(See `pad_placement.png` for the picture.)
+Match the label on your sensor cable: **RA**, **LA**, **RL** (RL is usually the **green** cable).
+Pictures: `pad_placement_shoulderRL.png` (RL on the shoulder — recommended for everyone)
+and `pad_placement.png` (RL on the chest bone — alternative, only if preferred).
 
-## Primary placement: UNDER THE CHIN — start here
+## Placement — SAME spots for everyone in the group
 
 | Label | Where exactly |
 |---|---|
 | **RA** | Under the chin, **left of center**, about two finger-widths below the jaw line |
 | **LA** | Under the chin, **right of center**, **2–3 cm away from RA** (side by side) |
-| **RL** (reference) | On the flat **chest bone at the center**, in the little dip just below the collarbones |
+| **RL** (green, reference) | On the **bony top of the shoulder** — the hard bump where a t-shirt seam sits. Fully clothed, nothing on or near the chest. |
 
-**Why here:** these muscles move the tongue and the floor of the mouth — the busiest
+**Why under the chin:** these muscles move the tongue and the floor of the mouth — the busiest
 muscles during speech, and different words move them differently (WATER = wide jaw +
 tongue tip, NO = small mouth, YES = tongue high, HELP = breathy start + lip pop).
 This spot also works for *silent mouthing* — a later test.
+
+**Why the shoulder for RL:** the reference only needs a quiet, bony spot away from the
+speaking muscles — the shoulder bone is exactly that, and everyone can use the identical
+spot, so all three members' recordings are comparable.
+
+**Backups if the shoulder is noisy:**
+- **Behind the ear** — the hard bone bump behind the earlobe (tie hair back).
+- **Chest bone** — the dip just below the collarbones (only if preferred; shoulder works the same).
 
 ## Skin prep (do this first — oil kills the signal)
 
@@ -27,7 +36,8 @@ This spot also works for *silent mouthing* — a later test.
 - **JAW:** RA on the cheek over the biting muscle (clench your teeth — the bump that
   pops out below the back teeth), LA 3 cm in front of it along the jaw line. RL stays on the chest.
 - **THROAT:** RA and LA on either side of the Adam's apple, 1–2 cm away.
-  (Picks up voicing — will NOT work for silent mouthing.)
+  (Picks up voicing — will NOT work for silent mouthing. Skip if anyone is not comfortable —
+  the cheek spots above are usually enough.)
 
 ## During recording
 

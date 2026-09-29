@@ -45,9 +45,9 @@ unsigned long tS = 0, tP = 0;
 void printBanner() {
   Serial.println();
   Serial.println(F("==== VocalBridge SENSE-WORDS (record-only, no deciding) ===="));
-  Serial.println(F("version=SenseV1   baud=115200"));
+  Serial.println(F("version=SenseV1.1 baud=115200"));
   Serial.println(F("wiring: OUT=GPIO34,LO+=GPIO32,LO-=GPIO33,VIN=3V3,GND=GND"));
-  Serial.println(F("pads: RA and LA under the chin (two finger-widths apart), RL on the chest bone"));
+  Serial.println(F("pads: RA and LA under the chin (two finger-widths apart), RL on the bony top of the shoulder"));
   Serial.println(F("plotter curves: raw,env,peak,pads   (PADS must stay one)"));
   Serial.println(F("mark keys: h=HELP,w=WATER,y=YES,n=NO,s=silent"));
   Serial.println(F("keys: r=fast/slow lines, i=this info"));
