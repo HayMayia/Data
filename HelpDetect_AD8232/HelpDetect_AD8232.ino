@@ -35,24 +35,27 @@ bool firstSample = true;
 const int RING = 100;
 int ring[RING]; int ringIdx = 0;
 
-// ---------- detector (numbers from Session 1, 29 Sep) ----------
-int  thresh = 1200;                 // bursts 1556-1764, noise <=1000
-const int MIN_ABOVE_MS = 150;       // burst must last this long
-const int REARM_ENV = 500;          // env must sink below this...
-const int REARM_MS  = 800;          // ...for this long, to re-arm
-unsigned long aboveSince = 0, belowSince = 0;
-bool armed = true;
-int  burstPeak = 0, helpCount = 0;
+// ---------- detector (DetectV1.1 — re-tuned on Session-1 data) ----------
+// V1.0 was too strict: it demanded env stay high for 150 ms, but your real
+// bursts DIP mid-word (1407 -> 1001 -> 1590), and it demanded stillness to
+// re-arm, which never happens while typing. Replay on your session showed
+// V1.0 would have fired ONCE in 12 words. V1.1: fire on the crossing, then
+// a 1.5 s quiet period (refractory) so one word = one alert.
+int  thresh = 1200;                 // your bursts 1556-1764, movement <1100
+const unsigned long REFRACTORY_MS = 1500;
+unsigned long lastFire = 0;
+int  maxEnvEver = 0, helpCount = 0, burstPeak = 0;
 
 unsigned long tS = 0, tP = 0;
 
 void printBanner() {
   Serial.println();
   Serial.println(F("==== VocalBridge HELP DETECTOR (tuned from your Session-1 data) ===="));
-  Serial.println(F("version=DetectV1  baud=115200"));
+  Serial.println(F("version=DetectV1.1  baud=115200  (fixed: fires on crossing + 1.5s refractory)"));
   Serial.println(F("firing rule: env >= threshold for 150 ms  ->  '>>> HELP! DETECTED <<<'"));
   Serial.print(F("threshold=")); Serial.print(thresh);
-  Serial.println(F("  (your HELP bursts: 1556-1764, silence ~314)"));
+  Serial.print(F("  (your HELP bursts: 1556-1764, silence ~314, max seen: "));
+  Serial.print(maxEnvEver); Serial.println(F(")"));
   Serial.println(F("keys: +/- threshold, t=test alert, i=info, r=speed, h/w/y/n/s=marks"));
   Serial.println(F("say it at the SAME loudness as Session 1; quieter = lower threshold with '-'"));
   Serial.println(F("plotter: raw,env,peak,pads,thresh  (watch env cross the thresh line)"));
@@ -73,6 +76,7 @@ void fireHelp(bool test) {
     Serial.print(F(">>>  HELP!  DETECTED  #"));
     Serial.print(helpCount);
     Serial.print(F("   peak=")); Serial.print(burstPeak);
+    Serial.print(F("   max=")); Serial.print(maxEnvEver);
   }
   Serial.print(F("   t=")); Serial.print(millis()/1000.0, 2); Serial.println(F("s"));
   Serial.println(F("############################################################"));
@@ -95,6 +99,7 @@ void sample() {
   int dev = abs(raw - center);
   if (dev > env) env = dev;
   else           env = (env * 97) / 100;
+  if (env > maxEnvEver) maxEnvEver = env;
   ring[ringIdx] = env;
   ringIdx = (ringIdx + 1) % RING;
 }
@@ -132,26 +137,11 @@ void loop() {
   unsigned long now = millis();
   if (now - tS >= (unsigned long)SAMPLE_MS) { tS = now; sample(); }
 
-  // ---------- detector state machine ----------
-  if (env >= thresh) {
-    if (aboveSince == 0) { aboveSince = now; burstPeak = env; }
-    else if (env > burstPeak) burstPeak = env;
-    belowSince = 0;
-    if (armed && now - aboveSince >= (unsigned long)MIN_ABOVE_MS) {
-      fireHelp(false);
-      armed = false;
-    }
-  } else {
-    aboveSince = 0; burstPeak = 0;
-    if (!armed) {
-      if (env < REARM_ENV) {
-        if (belowSince == 0) belowSince = now;
-        else if (now - belowSince >= (unsigned long)REARM_MS) {
-          armed = true; belowSince = 0;
-          Serial.println(F(">>> detector re-armed"));
-        }
-      } else belowSince = 0;
-    }
+  // ---------- detector (DetectV1.1) ----------
+  if (env > burstPeak) burstPeak = env;
+  if (env >= thresh && now - lastFire >= REFRACTORY_MS) {
+    fireHelp(false);
+    lastFire = now;
   }
 
   if (now - tP >= (unsigned long)printMs) { tP = now; printLine(); }
