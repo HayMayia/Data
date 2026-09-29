@@ -205,3 +205,10 @@ raw:2294,env:375,peak:652,pads:1,thresh:1200  [t=43.14s]
 raw:1872,env:453,peak:602,pads:1,thresh:1200  [t=43.19s]
 raw:1883,env:1162,peak:1275,pads:1,thresh:1200  [t=43.24s]
 raw:2127,env:534,peak:1275,pads:1,thresh:1200  [t=43.29s]
+# --- annotation (added 2026-09-29, not device output) ---
+# User confirmed: SILENT and STILL for this entire window (t=32.98-43.29 s).
+# Therefore all 6 V1.1 alerts in this stretch were pad/wire artifacts, not speech.
+# Replay check: longest run of env>=800 in this window = 2 lines (100 ms).
+# Real HELP words (session 1) hold env>=800 for 7+ lines (350+ ms).
+# Spikes with env>=1000 in this window: 10 (all single-line).
+# See chart: 2026-09-29_session2_falsefires_vs_word_chart.png
