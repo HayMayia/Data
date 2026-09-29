@@ -1,29 +1,33 @@
 /*
- * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.4
+ * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.5
  * ------------------------------------------------------
- * V1.3 lesson (29 Sep, session 3): the green (RL) electrode moved from
- * below the collarbone to the BACK OF THE NECK. Same voice, same word,
- * but the signal HALVED (words 1556-1764 -> 564-854). Fixed thresholds
- * cannot survive a placement change.
+ * V1.4 lesson (29 Sep, session 4): user pressed the pad while calibrating
+ * (silence read 92), then let go -> resting baseline rose to ~350-480, which
+ * is ABOVE the alert level 392 -> the detector fired on baseline noise, and
+ * bursts fused into multi-second "mega-bursts" that swallowed the real words.
  *
- * V1.4 = CALIBRATION + V1.3 shape gate:
- *   - press 'c' while SILENT and STILL: the board measures your silence
- *     level for 5 s and sets both gate levels from it:
- *         burst level = silence + 200   (a burst starts here)
- *         alert level = silence + 300   (peak needed to alert)
- *   - alert fires ONLY if the burst is speech-shaped:
- *        peak >= alert level  AND  burst has lasted >= 250 ms
- *   - short spikes still get a BURST report but NO alert
+ * V1.5 = CALIBRATION THAT CHECKS ITSELF:
+ *   - press 'c' while SILENT and STILL (do NOT hold the pads - sit exactly
+ *     how you will sit when speaking). It measures 5 s of silence and sets:
+ *         burst level = p90 + 60    (p90 = the level noise rarely exceeds)
+ *         alert level = p90 + 250
+ *   - then it VERIFIES for 3 more seconds: if the signal is still above the
+ *     burst level, it auto-raises the gates and tells you to calibrate again.
+ *   - LONG-BURST GUARD: a burst older than 3 s is cut off with a message -
+ *     real words last 0.3-1 s; a 3 s "burst" means pads moved or gates are
+ *     too low. This stops mega-burst fusion.
+ *   - alert fires ONLY if: peak >= alert level AND burst lasted >= 250 ms.
  *
  * MEASURED 29 Sep (same speaker, same word):
- *   RL below collarbone: silence ~314, words 1556-1764 (5x)   <- stronger
- *   RL back of neck    : silence ~275, words 564-854  (2.3x)  <- current
+ *   RA below Adam's apple (current): words 904-1624 env, strongest yet
+ *   RA on the side + RL neck        : words 564-854
+ *   RA/LA chin + RL collarbone      : words 1556-1764
  *
  * Board: ESP32 Dev Module, Baud 115200. Wiring same as always:
  *   AD8232: 3V3->3V3  GND->GND  OUT->GPIO34  LO+->GPIO32  LO-->GPIO33
  *
- * KEYS:  c calibrate (SILENT!)   +/- alert level x100   t test alert
- *        i info   r fast/slow   h/w/y/n/s marks
+ * KEYS:  c calibrate (SILENT, no pressing pads!)   +/- alert level x100
+ *        t test alert   i info   r fast/slow   h/w/y/n/s marks
  */
 
 const int PIN_OUT = 34, PIN_LOP = 32, PIN_LON = 33;
@@ -36,12 +40,13 @@ bool firstSample = true;
 const int RING = 100;
 int ring[RING]; int ringIdx = 0;
 
-// ---------- detector V1.4 (shape gate + calibration) ----------
-int  thresh   = 575;   // alert level: peak needed (default: RL back of neck)
-int  burstLvl = 475;   // burst starts here  (default: RL back of neck)
+// ---------- detector V1.5 (self-checking calibration + shape gate) ----------
+int  thresh   = 701;   // alert level (default: p90 451 + 250, session-4 baseline)
+int  burstLvl = 511;   // burst starts here (default: p90 451 + 60)
 const unsigned long BURST_GRACE_MS = 150;  // dips shorter than this stay in the burst
 const unsigned long SPEECH_MIN_MS  = 250;  // burst must LAST this long to alert
 const unsigned long REFRACTORY_MS  = 1500;
+const unsigned long BURST_MAX_MS   = 3000; // longer than this = not a word
 
 bool inBurst = false, firedThisBurst = false;
 unsigned long burstStart = 0, lastHigh = 0, lastFire = 0;
@@ -51,14 +56,14 @@ unsigned long tS = 0, tP = 0;
 
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.4 (calibrated shape gate) ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.5 (self-checking calibration) ===="));
   Serial.println(F("baud=115200"));
   Serial.println(F("alert = peak >= alert level AND burst lasts >= 250 ms"));
   Serial.print(F("burst level=")); Serial.print(burstLvl);
   Serial.print(F("  alert level=")); Serial.print(thresh);
-  Serial.println(F("  (defaults: RL on BACK OF NECK)"));
-  Serial.println(F("green pad moved? press c while SILENT+STILL -> auto re-tune (5 s)"));
-  Serial.println(F("measured: neck words 564-854 / collarbone words 1556-1764"));
+  Serial.println(F("  (defaults: RA below apple + RL neck)"));
+  Serial.println(F("after moving ANY pad: sit normally (no pressing pads), press c"));
+  Serial.println(F("measured: below-apple words 904-1624 / side words 564-854"));
   Serial.println(F("keys: c=calibrate, +/- alert, t=test, i=info, r=speed, marks h w y n s"));
   Serial.println(F("STATUE TEST: sit silent+still 20 s - alerts during it = wire/pad problem"));
   Serial.println(F("plotter: raw,env,peak,pads,thresh"));
@@ -87,26 +92,58 @@ void reportBurst(unsigned long durMs) {
   Serial.println(F("ms alert=no (too short or too weak - logged for study)"));
 }
 
-void runCalibrate() {
-  Serial.println(F(">>> CALIBRATE: sit SILENT + STILL, do not talk... (5 s)"));
-  const int N = 100;                     // 100 x 50 ms = 5 s
-  int buf[N];
-  for (int i = 0; i < N; i++) {
+void sortBuf(int *b, int n) {
+  for (int i = 0; i < n - 1; i++)
+    for (int j = i + 1; j < n; j++)
+      if (b[j] < b[i]) { int tmp = b[i]; b[i] = b[j]; b[j] = tmp; }
+}
+
+void collect(int n, int *buf) {          // n samples, one every 50 ms
+  for (int i = 0; i < n; i++) {
     unsigned long st = millis();
     while (millis() - st < 50) { sample(); delay(2); }
     buf[i] = env;
   }
-  for (int i = 0; i < N - 1; i++)        // sort small array
-    for (int j = i + 1; j < N; j++)
-      if (buf[j] < buf[i]) { int tmp = buf[i]; buf[i] = buf[j]; buf[j] = tmp; }
+}
+
+void runCalibrate() {
+  Serial.println(F(">>> CALIBRATE: sit SILENT + STILL, hands off pads... (5 s)"));
+  const int N = 100;                     // 100 x 50 ms = 5 s
+  int buf[N];
+  collect(N, buf);
+  sortBuf(buf, N);
   int med = (buf[N/2 - 1] + buf[N/2]) / 2;
-  burstLvl = med + 200;
-  thresh   = med + 300;
+  int p90 = (buf[N - 11] + buf[N - 10]) / 2;   // 90th percentile
+  burstLvl = p90 + 60;
+  thresh   = p90 + 250;
+  Serial.print(F(">>> CALIBRATE: silence med=")); Serial.print(med);
+  Serial.print(F("  p90=")); Serial.print(p90);
+  Serial.print(F("  burst=")); Serial.print(burstLvl);
+  Serial.print(F("  alert=")); Serial.println(thresh);
+  Serial.println(F(">>> checking for 3 more seconds..."));
+  const int V = 60;                      // 60 x 50 ms = 3 s verify
+  int vb[V];
+  int above = 0;
+  for (int i = 0; i < V; i++) {
+    unsigned long st = millis();
+    while (millis() - st < 50) { sample(); delay(2); }
+    vb[i] = env;
+    if (env >= burstLvl) above++;
+  }
+  if (above > V / 5) {                   // more than 20% above burst = too noisy
+    sortBuf(vb, V);
+    int p90v = (vb[V - 7] + vb[V - 6]) / 2;
+    if (p90v + 60 > burstLvl) {
+      burstLvl = p90v + 60;
+      thresh   = p90v + 250;
+      Serial.print(F(">>> STILL NOISY - gates auto-raised: burst=")); Serial.print(burstLvl);
+      Serial.print(F(" alert=")); Serial.println(thresh);
+      Serial.println(F(">>> pads loose or you moved: fix, then press c again"));
+    }
+  } else {
+    Serial.println(F(">>> CALIBRATE OK"));
+  }
   inBurst = false; burstPeak = 0; firedThisBurst = false;
-  Serial.print(F(">>> CALIBRATE done. silence=")); Serial.print(med);
-  Serial.print(F("  burst="));  Serial.print(burstLvl);
-  Serial.print(F("  alert="));  Serial.println(thresh);
-  Serial.println(F(">>> if you talked during it, press c again"));
 }
 
 void setup() {
@@ -169,17 +206,23 @@ void loop() {
   unsigned long now = millis();
   if (now - tS >= (unsigned long)SAMPLE_MS) { tS = now; sample(); }
 
-  // ---------- burst profiler + shape gate (V1.4) ----------
+  // ---------- burst profiler + shape gate (V1.5) ----------
   if (env >= burstLvl) {
     if (!inBurst) { inBurst = true; burstStart = now; burstPeak = env; firedThisBurst = false; }
     if (env > burstPeak) burstPeak = env;
     lastHigh = now;
     unsigned long age = now - burstStart;
-    if (!firedThisBurst && env >= thresh &&
-        age >= SPEECH_MIN_MS && now - lastFire >= REFRACTORY_MS) {
-      fireHelp(age);
-      lastFire = now;
-      firedThisBurst = true;
+    if (age > BURST_MAX_MS) {             // mega-burst guard
+      reportBurst(age);
+      Serial.println(F(">>> burst >3 s = pads moved or gates too low -> press c while silent"));
+      inBurst = false; burstPeak = 0;     // restart fresh next sample
+    } else {
+      if (!firedThisBurst && env >= thresh &&
+          age >= SPEECH_MIN_MS && now - lastFire >= REFRACTORY_MS) {
+        fireHelp(age);
+        lastFire = now;
+        firedThisBurst = true;
+      }
     }
   } else if (inBurst && now - lastHigh >= BURST_GRACE_MS) {
     reportBurst(now - burstStart);
