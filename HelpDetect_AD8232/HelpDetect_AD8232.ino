@@ -51,7 +51,7 @@ unsigned long tS = 0, tP = 0;
 void printBanner() {
   Serial.println();
   Serial.println(F("==== VocalBridge HELP DETECTOR (tuned from your Session-1 data) ===="));
-  Serial.println(F("version=DetectV1.1  baud=115200  (fixed: fires on crossing + 1.5s refractory)"));
+  Serial.println(F("version=DetectV1.2  baud=115200  (V1.1 logic + per-burst peak fix)"));
   Serial.println(F("firing rule: env >= threshold for 150 ms  ->  '>>> HELP! DETECTED <<<'"));
   Serial.print(F("threshold=")); Serial.print(thresh);
   Serial.print(F("  (your HELP bursts: 1556-1764, silence ~314, max seen: "));
@@ -142,6 +142,7 @@ void loop() {
   if (env >= thresh && now - lastFire >= REFRACTORY_MS) {
     fireHelp(false);
     lastFire = now;
+    burstPeak = 0;   // V1.2: show each burst's own peak (V1.1 latched the all-time max)
   }
 
   if (now - tP >= (unsigned long)printMs) { tP = now; printLine(); }
