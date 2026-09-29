@@ -21,9 +21,26 @@ This spot also works for *silent mouthing* — a later test.
 speaking muscles — the shoulder bone is exactly that, and everyone can use the identical
 spot, so all three members' recordings are comparable.
 
+## Measured 29 Sep: the green pad's spot changes the signal by ~2x
+
+Same speaker, same word (HELP), same RA/LA spots — only RL moved:
+
+| RL (green) spot | Silence | Word peaks | Word/silence |
+|---|---|---|---|
+| Below collarbone, on skin | ~314 | 1556–1764 | ~5x (strongest) |
+| Back of neck | ~275 | 564–854 | ~2.3x |
+
+Rules from this measurement:
+- **Pick ONE RL spot and keep it for the whole 4-word study** — recordings from
+  different placements cannot be compared.
+- A green pad that is "a little off" is NOT a little change — it halved the signal.
+- If you use the detector sketch (HelpDetect **V1.4+**), press **c** after moving any
+  pad: it measures your silence for 5 s and re-tunes its gates automatically.
+
 **Backups if the shoulder is noisy:**
 - **Behind the ear** — the hard bone bump behind the earlobe (tie hair back).
-- **Chest bone** — the dip just below the collarbones (only if preferred; shoulder works the same).
+- **Back of neck** — measured 29 Sep, works (about half the collarbone signal; press c to calibrate).
+- **Chest bone** — the dip just below the collarbones (only if preferred; strongest measured signal).
 
 ## Skin prep (do this first — oil kills the signal)
 
