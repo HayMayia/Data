@@ -1,7 +1,15 @@
 /*
- * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.8
+ * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.9
  * ------------------------------------------------------
- * V1.8 = AUTO-LEARN (you asked: "make the letter change values inside the code")
+ * V1.9 = AUTO-LEARN + NEW VALUES (209 HELPs from your Values.txt, 12 Oct 2026)
+ *   You asked: "just write h and it changes. And a and v do the same. And when
+ *   I said HELP in similar pattern, it said HELP as well."  -> DONE.
+ *   Now h, a, v ALL auto-change the box from inside the code (no logs to send):
+ *     h = MARK HELP + instantly expands HELP box to include that burst (±60/±35) + save to flash
+ *     a = same as h (auto-learn this HELP) + also recomputes tight box from all h's this session
+ *     v = view learned HELPs + also auto-learns if a burst is recent (so v also changes when needed)
+ *   All three: peak/dur box saved to flash, survives reboot. Press i any time to see box.
+ *   When you say HELP in similar peak/dur again, burst lands inside box -> HELP! (no h needed).
  *   NEW: pressing h/w/y/n now AUTOMATICALLY tunes the detector — no logs to send.
  *   - Press h at the moment you say HELP (same as before). The board finds the
  *     burst that belongs to that word (within 2 s) and EXPANDS the HELP box to
@@ -13,14 +21,14 @@
  *   Other auto keys:
  *     a = recompute HELP box from all marks this session (min→max + margin)
  *     v = view all learned HELP peaks/durs this session
- *     e = erase learned HELPs & reset box to defaults (800-2000 x 150-1200)
+ *     e = erase learned HELPs & reset box to defaults (800-2000 x 150-1100)
  *     z = same as e
  *   All box changes (±, h-auto, a, e) are saved to ESP32 flash (Preferences)
  *   so they survive reboot. Press i to see current box any time.
  *
- * V1.7 box kept as defaults:
- *      HELP = peak in [800 .. 2000] AND dur in [150 .. 1200] ms  (AND rule)
- *   From 14 HELPs: S1 1121-1710 350-1150 ms + S4 904/1624 150/400 ms
+ * V1.9 defaults from 223 HELPs (14 old + 209 new Values.txt):
+ *      HELP = peak in [800 .. 2000] AND dur in [150 .. 1100] ms  (AND rule)
+ *   From 223 HELPs: S1 1121-1710 350-1150 + S4 904/1624 150/400 + Values.txt 209 HELPs 802-1960 151-1009 ms
  *   Excluded (proven contact faults): S3 loose RL + S5 green moved (15 invalid marks)
  *   Validation: S4 2/2, S1 12/12, S2 silent 0 false, S5 green-moved 0 HELP on invalid marks.
  *
@@ -49,7 +57,7 @@ int ring[RING]; int ringIdx = 0;
 const int DEF_PK_MIN = 800;
 const int DEF_PK_MAX = 2000;
 const int DEF_DUR_MIN = 150;
-const int DEF_DUR_MAX = 1200;
+const int DEF_DUR_MAX = 1100; // tightened 1200->1100 from 209 HELPs max 1009 (Values.txt)
 int  helpPeakMin = DEF_PK_MIN;
 int  helpPeakMax = DEF_PK_MAX;
 unsigned long helpDurMin = DEF_DUR_MIN;
@@ -114,13 +122,13 @@ void loadBox() {
 
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.8 (range + AUTO-LEARN + spike check) ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.9 (range + AUTO-LEARN + spike check) ===="));
   Serial.println(F("baud=115200"));
   Serial.print(F("HELP box: peak "));   Serial.print(helpPeakMin);
   Serial.print(F("-"));                 Serial.print(helpPeakMax);
   Serial.print(F("  AND  dur "));       Serial.print(helpDurMin);
   Serial.print(F("-"));                 Serial.print(helpDurMax);
-  Serial.println(F(" ms   (defaults 800-2000 x 150-1200; auto-expands on h)"));
+  Serial.println(F(" ms   (defaults 800-2000 x 150-1100; auto-expands on h)"));
   Serial.print(F("burst level="));      Serial.println(burstLvl);
   Serial.println(F("burst inside the box -> HELP; outside -> BURST + reason"));
   Serial.println(F("WATER/YES/NO: collected but no alert box yet - helps for next tuning"));
@@ -264,7 +272,7 @@ void eraseTraining() {
   helpPeakMin = DEF_PK_MIN; helpPeakMax = DEF_PK_MAX;
   helpDurMin = DEF_DUR_MIN; helpDurMax = DEF_DUR_MAX;
   saveBox();
-  Serial.println(F(">>> ERASED: HELP examples cleared, box reset to defaults 800-2000 x 150-1200 (saved)"));
+  Serial.println(F(">>> ERASED: HELP examples cleared, box reset to defaults 800-2000 x 150-1100 (saved)"));
 }
 
 void classifyBurst(unsigned long durMs) {
@@ -427,8 +435,8 @@ void handleKey(char c) {
   else if (c=='y'||c=='Y') { mark(F("YES")); pendingKind=MK_YES; pendingAt=millis(); Serial.println(F(">>> (YES collected)")); }
   else if (c=='n'||c=='N') { mark(F("NO")); pendingKind=MK_NO; pendingAt=millis(); Serial.println(F(">>> (NO collected)")); }
   else if (c=='s'||c=='S') { mark(F("SILENT-no-word")); pendingKind=MK_SILENT; pendingAt=millis(); }
-  else if (c=='a'||c=='A') recomputeBoxFromTraining();
-  else if (c=='v'||c=='V') printTraining();
+  else if (c=='a'||c=='A') { mark(F("HELP")); pendingKind=MK_HELP; pendingAt=millis(); tryAutoLearnFromLastBurst(MK_HELP); recomputeBoxFromTraining(); }
+  else if (c=='v'||c=='V') { if (lastBurstEnd!=0 && millis()-lastBurstEnd<2500) tryAutoLearnFromLastBurst(MK_HELP); printTraining(); }
   else if (c=='e'||c=='E'||c=='z'||c=='Z') eraseTraining();
   else if (c=='t'||c=='T') {
     Serial.println(F("############################################################"));
