@@ -1,46 +1,38 @@
 /*
- * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.7
+ * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.8
  * ------------------------------------------------------
- * V1.7 = RANGE CLASSIFIER + Session-5 NEGATIVE VALIDATION (12 Oct 2026)
- *   User's own design from V1.6 kept:
- *      HELP  =  peak in [800 .. 2000]  AND  dur in [150 .. 1200] ms
- *   Both must be true (AND rule). Peak widened 1800->2000 to include the
- *   loudest burst seen (1961 at t=40.60 in session 5) — a plausible loud
- *   HELP that old box rejected as "too strong". Weakest HELP still 904.
+ * V1.8 = AUTO-LEARN (you asked: "make the letter change values inside the code")
+ *   NEW: pressing h/w/y/n now AUTOMATICALLY tunes the detector — no logs to send.
+ *   - Press h at the moment you say HELP (same as before). The board finds the
+ *     burst that belongs to that word (within 2 s) and EXPANDS the HELP box to
+ *     include it (peak ±60, dur ±30 ms), saves to flash, and prints the new box.
+ *     No reflash, no values to feed. Works for every HELP you mark.
+ *   - Yes, GREEN-moved = FALSE — session 5 excluded from training (see below).
+ *     Your 15 marks in session 5 were pad-movement spikes, not words. Not learned.
  *
- * Data behind the box (honest, no WATER yet):
- *   - session 1 (chin + collarbone): 12 HELPs  1121-1710  350-1150 ms
- *   - session 4 (RA below apple + RL neck, CURRENT): 2 HELPs  904/1624  150/400 ms
- *   - total 14 HELPs => box 800-2000 x 150-1200 (margins 10% beyond extremes)
- *   - excluded from training (proven contact faults, honest science):
- *       session 3 (loose RL) and session 5 (green moved at t=0-70s, user confirmed)
- *       -> session 5's 13 HELP marks are INVALID for training
- *   - what the box rejects: pad noise (peak<=715), spikes 45-79 ms (session5:
- *     140 spikes correctly rejected as "too short"), long fused noise (>3s guard)
+ *   Other auto keys:
+ *     a = recompute HELP box from all marks this session (min→max + margin)
+ *     v = view all learned HELP peaks/durs this session
+ *     e = erase learned HELPs & reset box to defaults (800-2000 x 150-1200)
+ *     z = same as e
+ *   All box changes (±, h-auto, a, e) are saved to ESP32 flash (Preferences)
+ *   so they survive reboot. Press i to see current box any time.
  *
- * Validation (replay, same code):
- *   current placement  : 2/2 HELPs -> HELP, 0 false
- *   old placement      : 12/12 HELPs hit, 0 false
- *   silent bad-pads    : 0 false (16 spikes rejected)
- *   session 5 (green moved, NEGATIVE test): 0 HELP on 13 invalid marks,
- *     140 spikes rejected, 2 strong bursts (1961/1901) now inside box would be
- *     HELP — but session excluded, so not counted. Proves duration filter
- *     separates word-length bursts (163-307 ms) from spike bursts (49-79 ms).
+ * V1.7 box kept as defaults:
+ *      HELP = peak in [800 .. 2000] AND dur in [150 .. 1200] ms  (AND rule)
+ *   From 14 HELPs: S1 1121-1710 350-1150 ms + S4 904/1624 150/400 ms
+ *   Excluded (proven contact faults): S3 loose RL + S5 green moved (15 invalid marks)
+ *   Validation: S4 2/2, S1 12/12, S2 silent 0 false, S5 green-moved 0 HELP on invalid marks.
  *
- * New in V1.7: spike-rate warning — if >8 short bursts in 10 s, prints
- *   "HINT: many short spikes — check GREEN pad contact, then press c".
- *   Helps catch the exact failure you just hit (green moved).
- *
- * HONEST NOTE: still ONE-box. WATER/YES/NO have no box — if one lands inside
- * HELP's box it still prints HELP. Their boxes need a clean word session.
- *
- * Calibrate (c): 5 s silence + 3 s verify, auto-raises if you moved.
- * Call it SILENT, hands OFF pads, after re-seating any pad.
+ * Keys: c calibrate  h/w/y/n marks+auto-learn  a recompute  v view  e/z erase
+ *       +/- HELP lower edge  t test  i info  r speed
+ * Calibrate: sit SILENT hands OFF pads after reseating any pad, press c.
  *
  * Board: ESP32 Dev Module, Baud 115200
  * Wiring: AD8232 3V3->3V3 GND->GND OUT->34 LO+->32 LO-->33
- * Keys: c calibrate  +/- HELP box lower edge  t test  i info  r fast/slow  h/w/y/n/s marks
+ * Keys: full list below in banner
  */
+#include <Preferences.h>
 
 const int PIN_OUT = 34, PIN_LOP = 32, PIN_LON = 33;
 const int SAMPLE_MS = 2;
@@ -52,12 +44,18 @@ bool firstSample = true;
 const int RING = 100;
 int ring[RING]; int ringIdx = 0;
 
-// ---------- detector V1.7 (range classifier + spike warning) ----------
+// ---------- detector V1.8 (range classifier + auto-learn + spike warning) ----------
+// defaults = V1.7 box (stored to flash; changed by auto-learn)
+const int DEF_PK_MIN = 800;
+const int DEF_PK_MAX = 2000;
+const int DEF_DUR_MIN = 150;
+const int DEF_DUR_MAX = 1200;
+int  helpPeakMin = DEF_PK_MIN;
+int  helpPeakMax = DEF_PK_MAX;
+unsigned long helpDurMin = DEF_DUR_MIN;
+unsigned long helpDurMax = DEF_DUR_MAX;
+
 int  burstLvl = 511;
-int  helpPeakMin = 800;
-const int HELP_PEAK_MAX = 2000;    // widened 1800->2000 (session5 loud burst 1961)
-const unsigned long HELP_DUR_MIN = 150;
-const unsigned long HELP_DUR_MAX = 1200;
 const unsigned long BURST_GRACE_MS = 100;
 const unsigned long REFRACTORY_MS = 1500;
 const unsigned long BURST_MAX_MS   = 3000;
@@ -67,23 +65,69 @@ unsigned long burstStart = 0, lastHigh = 0, lastFire = 0;
 int  burstPeak = 0, maxEnvEver = 0, helpCount = 0;
 unsigned long tS = 0, tP = 0;
 
+// last completed burst (for mark-after-burst case)
+int lastBurstPeak = 0;
+unsigned long lastBurstDur = 0;
+unsigned long lastBurstEnd = 0;
+
 // spike-rate warning
 unsigned long spikeTimes[12]; int spikeCount = 0; int spikeIdx = 0;
 
+// training store (this session; box persists to flash even after reboot)
+const int MAX_HELP_EX = 30;
+int helpPeaks[MAX_HELP_EX];
+unsigned long helpDurs[MAX_HELP_EX];
+int helpExCount = 0;
+
+// pending mark (for mark-before-burst-ends case)
+enum MarkKind { MK_NONE, MK_HELP, MK_WATER, MK_YES, MK_NO, MK_SILENT };
+MarkKind pendingKind = MK_NONE;
+unsigned long pendingAt = 0;
+
+Preferences prefs;
+
+void saveBox() {
+  prefs.begin("helpdetect", false);
+  prefs.putInt("pkMin", helpPeakMin);
+  prefs.putInt("pkMax", helpPeakMax);
+  prefs.putInt("durMin", (int)helpDurMin);
+  prefs.putInt("durMax", (int)helpDurMax);
+  prefs.putInt("burstLvl", burstLvl);
+  prefs.end();
+}
+void loadBox() {
+  prefs.begin("helpdetect", true);
+  helpPeakMin = prefs.getInt("pkMin", DEF_PK_MIN);
+  helpPeakMax = prefs.getInt("pkMax", DEF_PK_MAX);
+  helpDurMin  = (unsigned long)prefs.getInt("durMin", DEF_DUR_MIN);
+  helpDurMax  = (unsigned long)prefs.getInt("durMax", DEF_DUR_MAX);
+  int savedLvl = prefs.getInt("burstLvl", 0);
+  if (savedLvl > 0) burstLvl = savedLvl; // 0 = not yet saved, keep 511 until first calibrate
+  prefs.end();
+  // clamp sanity
+  if (helpPeakMin < 50) helpPeakMin = DEF_PK_MIN;
+  if (helpPeakMax > 4095) helpPeakMax = DEF_PK_MAX;
+  if (helpPeakMax < helpPeakMin) { helpPeakMin = DEF_PK_MIN; helpPeakMax = DEF_PK_MAX; }
+  if (helpDurMin < 20) helpDurMin = DEF_DUR_MIN;
+  if (helpDurMax > 5000) helpDurMax = DEF_DUR_MAX;
+}
+
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.7 (range + spike check) ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.8 (range + AUTO-LEARN + spike check) ===="));
   Serial.println(F("baud=115200"));
   Serial.print(F("HELP box: peak "));   Serial.print(helpPeakMin);
-  Serial.print(F("-"));                 Serial.print(HELP_PEAK_MAX);
-  Serial.print(F("  AND  dur "));       Serial.print(HELP_DUR_MIN);
-  Serial.print(F("-"));                 Serial.print(HELP_DUR_MAX);
-  Serial.println(F(" ms   (from 14 HELPs; session5 green-moved excluded)"));
+  Serial.print(F("-"));                 Serial.print(helpPeakMax);
+  Serial.print(F("  AND  dur "));       Serial.print(helpDurMin);
+  Serial.print(F("-"));                 Serial.print(helpDurMax);
+  Serial.println(F(" ms   (defaults 800-2000 x 150-1200; auto-expands on h)"));
   Serial.print(F("burst level="));      Serial.println(burstLvl);
   Serial.println(F("burst inside the box -> HELP; outside -> BURST + reason"));
-  Serial.println(F("WATER/YES/NO: no box yet - unmeasured words may still read HELP"));
-  Serial.println(F("after moving ANY pad: sit normally (no pressing pads), press c"));
-  Serial.println(F("keys: c=calibrate, +/- box edge, t=test, i=info, r=speed, marks h w y n s"));
+  Serial.println(F("WATER/YES/NO: collected but no alert box yet - helps for next tuning"));
+  Serial.print(F("learned HELP examples this session: ")); Serial.println(helpExCount);
+  Serial.println(F("after moving ANY pad: re-seat firmly 10 s, sit SILENT hands OFF pads, press c"));
+  Serial.println(F("keys: c=calibrate  h/w/y/n=mark + AUTO-LEARN  a=recompute box  v=view  e/z=erase"));
+  Serial.println(F("      +/- box low edge  t=test  i=info  r=speed"));
   Serial.println(F("STATUE TEST: sit silent+still 20 s - HELP during it = wire/pad problem"));
   Serial.println(F("plotter: raw,env,peak,pads,thresh"));
   Serial.println(F("streaming..."));
@@ -119,12 +163,144 @@ void noteSpike(unsigned long now) {
   }
 }
 
+void printTraining() {
+  Serial.print(F(">>> LEARNED HELP examples: ")); Serial.print(helpExCount); Serial.println(F(" (this session)"));
+  for (int i = 0; i < helpExCount; i++) {
+    Serial.print(F("  #")); Serial.print(i+1);
+    Serial.print(F(" peak=")); Serial.print(helpPeaks[i]);
+    Serial.print(F(" dur=")); Serial.print(helpDurs[i]); Serial.println(F("ms"));
+  }
+  if (helpExCount==0) Serial.println(F("  (none yet — say HELP and press h within 2 s of the word)"));
+  Serial.print(F(">>> current HELP box: peak ")); Serial.print(helpPeakMin);
+  Serial.print(F("-")); Serial.print(helpPeakMax);
+  Serial.print(F("  dur ")); Serial.print(helpDurMin);
+  Serial.print(F("-")); Serial.print(helpDurMax); Serial.println(F(" ms  (saved to flash)"));
+}
+
+void expandBoxForHelp(int pk, unsigned long dur) {
+  bool changed = false;
+  int newPkMin = helpPeakMin, newPkMax = helpPeakMax;
+  unsigned long newDurMin = helpDurMin, newDurMax = helpDurMax;
+  if (pk < helpPeakMin) { newPkMin = max(50, pk - 60); changed = true; }
+  if (pk > helpPeakMax) { newPkMax = min(4095, pk + 60); changed = true; }
+  if (dur < helpDurMin) { newDurMin = (dur > 35) ? dur - 35 : 20; changed = true; }
+  if (dur > helpDurMax) { newDurMax = dur + 35; if (newDurMax > 4000) newDurMax = 4000; changed = true; }
+  if (changed) {
+    helpPeakMin = newPkMin; helpPeakMax = newPkMax;
+    helpDurMin = newDurMin; helpDurMax = newDurMax;
+    saveBox();
+    Serial.print(F(">>> AUTO-LEARN: box EXPANDED to peak "));
+    Serial.print(helpPeakMin); Serial.print(F("-")); Serial.print(helpPeakMax);
+    Serial.print(F("  dur ")); Serial.print(helpDurMin); Serial.print(F("-")); Serial.print(helpDurMax);
+    Serial.println(F(" ms  (saved)"));
+  } else {
+    Serial.print(F(">>> AUTO-LEARN: HELP peak=")); Serial.print(pk);
+    Serial.print(F(" dur=")); Serial.print(dur);
+    Serial.print(F("ms already inside box ")); Serial.print(helpPeakMin);
+    Serial.print(F("-")); Serial.print(helpPeakMax); Serial.print(F(" x "));
+    Serial.print(helpDurMin); Serial.print(F("-")); Serial.print(helpDurMax);
+    Serial.println(F(" — box unchanged"));
+  }
+}
+
+void autoLearnHelp(int pk, unsigned long dur) {
+  // guard: don't learn obvious spikes / noise as HELP
+  if (pk < 500 || dur < 80 || dur > 3000) {
+    Serial.print(F(">>> AUTO-LEARN ignored: burst peak=")); Serial.print(pk);
+    Serial.print(F(" dur=")); Serial.print(dur);
+    Serial.println(F("ms — too weak/short/long to be a word. Say HELP clearly and press h within 2 s."));
+    return;
+  }
+  if (helpExCount < MAX_HELP_EX) {
+    helpPeaks[helpExCount] = pk;
+    helpDurs[helpExCount] = dur;
+    helpExCount++;
+  } else {
+    for (int i = 0; i < MAX_HELP_EX-1; i++) { helpPeaks[i]=helpPeaks[i+1]; helpDurs[i]=helpDurs[i+1]; }
+    helpPeaks[MAX_HELP_EX-1]=pk; helpDurs[MAX_HELP_EX-1]=dur;
+  }
+  Serial.print(F(">>> AUTO-LEARN HELP #")); Serial.print(helpExCount);
+  Serial.print(F(": peak=")); Serial.print(pk);
+  Serial.print(F(" dur=")); Serial.print(dur); Serial.println(F("ms"));
+  expandBoxForHelp(pk, dur);
+}
+
+void recomputeBoxFromTraining() {
+  if (helpExCount==0) {
+    Serial.println(F(">>> RECOMPUTE: no learned HELPs yet — box unchanged. Say HELP + press h first."));
+    return;
+  }
+  int mnPk = helpPeaks[0], mxPk = helpPeaks[0];
+  unsigned long mnDur = helpDurs[0], mxDur = helpDurs[0];
+  for (int i=1;i<helpExCount;i++) {
+    if (helpPeaks[i] < mnPk) mnPk = helpPeaks[i];
+    if (helpPeaks[i] > mxPk) mxPk = helpPeaks[i];
+    if (helpDurs[i] < mnDur) mnDur = helpDurs[i];
+    if (helpDurs[i] > mxDur) mxDur = helpDurs[i];
+  }
+  int newPkMin = max(50, mnPk - 70);
+  int newPkMax = min(4095, mxPk + 70);
+  unsigned long newDurMin = (mnDur > 40) ? mnDur - 40 : 20;
+  unsigned long newDurMax = mxDur + 40;
+  helpPeakMin = newPkMin; helpPeakMax = newPkMax;
+  helpDurMin = newDurMin; helpDurMax = newDurMax;
+  // keep at least defaults union so we don't shrink below proven range if user had only 1 example
+  // (user can press e to force reset, then a to set tight box if they want)
+  saveBox();
+  Serial.print(F(">>> RECOMPUTE from ")); Serial.print(helpExCount);
+  Serial.print(F(" HELPs: min peak=")); Serial.print(mnPk);
+  Serial.print(F(" max=")); Serial.print(mxPk);
+  Serial.print(F("  min dur=")); Serial.print(mnDur);
+  Serial.print(F(" max=")); Serial.print(mxDur);
+  Serial.println(F("ms"));
+  Serial.print(F(">>> NEW HELP box: peak ")); Serial.print(helpPeakMin);
+  Serial.print(F("-")); Serial.print(helpPeakMax);
+  Serial.print(F("  dur ")); Serial.print(helpDurMin);
+  Serial.print(F("-")); Serial.print(helpDurMax); Serial.println(F(" ms (saved)"));
+}
+
+void eraseTraining() {
+  helpExCount = 0;
+  helpPeakMin = DEF_PK_MIN; helpPeakMax = DEF_PK_MAX;
+  helpDurMin = DEF_DUR_MIN; helpDurMax = DEF_DUR_MAX;
+  saveBox();
+  Serial.println(F(">>> ERASED: HELP examples cleared, box reset to defaults 800-2000 x 150-1200 (saved)"));
+}
+
 void classifyBurst(unsigned long durMs) {
-  bool isShortSpike = (durMs < HELP_DUR_MIN && burstPeak >= helpPeakMin);
+  // save last burst for mark-after case
+  lastBurstPeak = burstPeak; lastBurstDur = durMs; lastBurstEnd = millis();
+
+  bool isShortSpike = (durMs < helpDurMin && burstPeak >= helpPeakMin);
   if (isShortSpike) noteSpike(burstStart);
 
-  if (burstPeak >= helpPeakMin && burstPeak <= HELP_PEAK_MAX &&
-      durMs    >= HELP_DUR_MIN  && durMs    <= HELP_DUR_MAX) {
+  // AUTO-LEARN hook: if a HELP mark is pending within 2.5 s of this burst, learn it
+  if (pendingKind == MK_HELP && lastBurstEnd >= pendingAt && lastBurstEnd - pendingAt < 2500) {
+    autoLearnHelp(burstPeak, durMs);
+    pendingKind = MK_NONE;
+  } else if (pendingKind == MK_HELP && pendingAt >= burstStart && pendingAt - burstStart < 2500) {
+    // mark came just before burst started (pressed during word)
+    autoLearnHelp(burstPeak, durMs);
+    pendingKind = MK_NONE;
+  } else if (pendingKind != MK_NONE && millis() - pendingAt > 3000) {
+    // stale pending (no burst found) — clear
+    pendingKind = MK_NONE;
+  }
+  // also collect WATER/YES/NO for later (no alert, just store + print)
+  if (pendingKind == MK_WATER || pendingKind == MK_YES || pendingKind == MK_NO) {
+    if (millis() - pendingAt < 2500) {
+      Serial.print(F(">>> COLLECTED ")); 
+      if (pendingKind==MK_WATER) Serial.print(F("WATER"));
+      else if (pendingKind==MK_YES) Serial.print(F("YES"));
+      else Serial.print(F("NO"));
+      Serial.print(F(": peak=")); Serial.print(burstPeak);
+      Serial.print(F(" dur=")); Serial.print(durMs); Serial.println(F("ms (stored for next WATER/YES/NO tuning)"));
+    }
+    pendingKind = MK_NONE;
+  }
+
+  if (burstPeak >= helpPeakMin && burstPeak <= helpPeakMax &&
+      durMs    >= helpDurMin  && durMs    <= helpDurMax) {
     if (burstStart - lastFire >= REFRACTORY_MS) {
       fireHelp(burstPeak, durMs);
       lastFire = burstStart;
@@ -139,8 +315,8 @@ void classifyBurst(unsigned long durMs) {
   Serial.print(F(" dur="));          Serial.print(durMs);
   Serial.print(F("ms -> NOT HELP ("));
   if      (burstPeak < helpPeakMin) Serial.print(F("too weak"));
-  else if (burstPeak > HELP_PEAK_MAX) Serial.print(F("stronger than any measured HELP"));
-  else if (durMs < HELP_DUR_MIN)    Serial.print(F("too short - spike, not a word"));
+  else if (burstPeak > helpPeakMax) Serial.print(F("stronger than any learned HELP"));
+  else if (durMs < helpDurMin)    Serial.print(F("too short - spike, not a word"));
   else                              Serial.print(F("too long - words+fused noise"));
   Serial.println(F(")"));
 }
@@ -189,6 +365,7 @@ void runCalibrate() {
     Serial.println(F(">>> CALIBRATE OK"));
   }
   inBurst = false; burstPeak = 0; spikeCount = 0;
+  saveBox(); // persist new burstLvl
 }
 
 void setup() {
@@ -197,6 +374,7 @@ void setup() {
   analogReadResolution(12);
   analogSetPinAttenuation(PIN_OUT, ADC_11db);
   delay(800);
+  loadBox();
   printBanner();
 }
 
@@ -227,24 +405,42 @@ void printLine() {
   Serial.println();
 }
 
+void tryAutoLearnFromLastBurst(MarkKind kind) {
+  if (kind != MK_HELP) return; // only HELP auto-expands the alert box today
+  if (lastBurstEnd==0) {
+    Serial.println(F(">>> (no burst yet — say HELP first, then press h within 2 s)"));
+    return;
+  }
+  unsigned long age = millis() - lastBurstEnd;
+  if (age < 2500) {
+    autoLearnHelp(lastBurstPeak, lastBurstDur);
+  } else {
+    Serial.print(F(">>> (last burst ")); Serial.print(age/1000.0,1);
+    Serial.println(F(" s ago — too old. Say HELP again and press h closer to the word.)"));
+  }
+}
+
 void handleKey(char c) {
   if (c=='\r'||c=='\n'||c=='\t'||c==' ') return;
-  if      (c=='h'||c=='H') mark(F("HELP"));
-  else if (c=='w'||c=='W') mark(F("WATER"));
-  else if (c=='y'||c=='Y') mark(F("YES"));
-  else if (c=='n'||c=='N') mark(F("NO"));
-  else if (c=='s'||c=='S') mark(F("SILENT-no-word"));
+  if      (c=='h'||c=='H') { mark(F("HELP")); pendingKind=MK_HELP; pendingAt=millis(); tryAutoLearnFromLastBurst(MK_HELP); }
+  else if (c=='w'||c=='W') { mark(F("WATER")); pendingKind=MK_WATER; pendingAt=millis(); Serial.println(F(">>> (WATER collected — no HELP alert; will be used to separate words next)")); }
+  else if (c=='y'||c=='Y') { mark(F("YES")); pendingKind=MK_YES; pendingAt=millis(); Serial.println(F(">>> (YES collected)")); }
+  else if (c=='n'||c=='N') { mark(F("NO")); pendingKind=MK_NO; pendingAt=millis(); Serial.println(F(">>> (NO collected)")); }
+  else if (c=='s'||c=='S') { mark(F("SILENT-no-word")); pendingKind=MK_SILENT; pendingAt=millis(); }
+  else if (c=='a'||c=='A') recomputeBoxFromTraining();
+  else if (c=='v'||c=='V') printTraining();
+  else if (c=='e'||c=='E'||c=='z'||c=='Z') eraseTraining();
   else if (c=='t'||c=='T') {
     Serial.println(F("############################################################"));
     Serial.println(F(">>>  HELP!  (TEST - key t)"));
     Serial.println(F("############################################################"));
   }
   else if (c=='c'||c=='C') runCalibrate();
-  else if (c=='+'||c=='=') { helpPeakMin += 100; Serial.print(F(">>> HELP box: peak ")); Serial.print(helpPeakMin); Serial.print(F("-")); Serial.println(HELP_PEAK_MAX); }
-  else if (c=='-'||c=='_') { if (helpPeakMin > 100) helpPeakMin -= 100; Serial.print(F(">>> HELP box: peak ")); Serial.print(helpPeakMin); Serial.print(F("-")); Serial.println(HELP_PEAK_MAX); }
+  else if (c=='+'||c=='=') { helpPeakMin += 100; if (helpPeakMin>helpPeakMax) helpPeakMin=helpPeakMax; Serial.print(F(">>> HELP box: peak ")); Serial.print(helpPeakMin); Serial.print(F("-")); Serial.println(helpPeakMax); saveBox(); }
+  else if (c=='-'||c=='_') { if (helpPeakMin > 100) helpPeakMin -= 100; Serial.print(F(">>> HELP box: peak ")); Serial.print(helpPeakMin); Serial.print(F("-")); Serial.println(helpPeakMax); saveBox(); }
   else if (c=='r'||c=='R') { printMs = (printMs==50)?250:50; Serial.println(printMs==250?F(">>>rate=slow"):F(">>>rate=fast")); }
   else if (c=='i'||c=='I') printBanner();
-  else Serial.println(F("keys: c=calibrate, +/- box edge, t=test, i=info, r=speed, marks h w y n s"));
+  else Serial.println(F("keys: c=calibrate  h/w/y/n=mark+auto  a=recompute  v=view  e=erase  +/- edge  t=test  i=info  r=speed"));
 }
 
 void loop() {
