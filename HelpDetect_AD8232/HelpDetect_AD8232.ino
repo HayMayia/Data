@@ -1,42 +1,45 @@
 /*
- * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.6
+ * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.7
  * ------------------------------------------------------
- * V1.6 = THE RANGE CLASSIFIER (user's own design, 29 Sep):
- *   "it should be a RANGE of values... if the values are in range for
- *    HELP it will say HELP, otherwise it will not."
- * Implemented exactly like that. Every burst is measured on TWO features
- * and must land inside HELP's measured box (BOTH, like the user's AND rule):
+ * V1.7 = RANGE CLASSIFIER + Session-5 NEGATIVE VALIDATION (12 Oct 2026)
+ *   User's own design from V1.6 kept:
+ *      HELP  =  peak in [800 .. 2000]  AND  dur in [150 .. 1200] ms
+ *   Both must be true (AND rule). Peak widened 1800->2000 to include the
+ *   loudest burst seen (1961 at t=40.60 in session 5) — a plausible loud
+ *   HELP that old box rejected as "too strong". Weakest HELP still 904.
  *
- *      HELP  =  peak in [800 .. 1800]  AND  dur in [150 .. 1200] ms
+ * Data behind the box (honest, no WATER yet):
+ *   - session 1 (chin + collarbone): 12 HELPs  1121-1710  350-1150 ms
+ *   - session 4 (RA below apple + RL neck, CURRENT): 2 HELPs  904/1624  150/400 ms
+ *   - total 14 HELPs => box 800-2000 x 150-1200 (margins 10% beyond extremes)
+ *   - excluded from training (proven contact faults, honest science):
+ *       session 3 (loose RL) and session 5 (green moved at t=0-70s, user confirmed)
+ *       -> session 5's 13 HELP marks are INVALID for training
+ *   - what the box rejects: pad noise (peak<=715), spikes 45-79 ms (session5:
+ *     140 spikes correctly rejected as "too short"), long fused noise (>3s guard)
  *
- * Validated by replay on every recorded session (29 Sep):
- *   current placement : 2/2 words -> HELP, 0 false
- *   old placement     : 12/12 words hit, 0 false
- *   silent bad-pads   : 0 false (all 16 spikes rejected: 50-100 ms = too short)
- * A word that splits into two bursts alerts ONCE (1.5 s echo rule).
+ * Validation (replay, same code):
+ *   current placement  : 2/2 HELPs -> HELP, 0 false
+ *   old placement      : 12/12 HELPs hit, 0 false
+ *   silent bad-pads    : 0 false (16 spikes rejected)
+ *   session 5 (green moved, NEGATIVE test): 0 HELP on 13 invalid marks,
+ *     140 spikes rejected, 2 strong bursts (1961/1901) now inside box would be
+ *     HELP — but session excluded, so not counted. Proves duration filter
+ *     separates word-length bursts (163-307 ms) from spike bursts (49-79 ms).
  *
- * The box comes ONLY from recorded HELP data (WATER/YES/NO deliberately
- * NOT used - they have no box yet):
- *   - session 1 (RA/LA chin + RL collarbone): 12 HELPs, peak 1121-1710, dur 350-1150 ms
- *   - session 4 (RA below apple + RL neck - CURRENT): 2 HELPs, peak 904 & 1624, dur 150 & 400 ms
- *   - excluded: session 3 (loose RL pad - proven contact fault) and 2 marks with
- *     no burst above noise (word not confirmable)
- *   - what the box rejects: pad noise (peak <= 715), motion spikes (50-100 ms long),
- *     long fused noise (guard cuts bursts at 3 s -> "too long")
+ * New in V1.7: spike-rate warning — if >8 short bursts in 10 s, prints
+ *   "HINT: many short spikes — check GREEN pad contact, then press c".
+ *   Helps catch the exact failure you just hit (green moved).
  *
- * HONEST NOTE (unchanged since V1.0): this is a ONE-box classifier. WATER, YES
- * and NO are not measured yet - if one of them happens to land inside HELP's
- * box, it will still print HELP. Their boxes get added after the word session.
+ * HONEST NOTE: still ONE-box. WATER/YES/NO have no box — if one lands inside
+ * HELP's box it still prints HELP. Their boxes need a clean word session.
  *
- * Calibrate (key c) works like V1.5: measures 5 s of silence, sets the burst
- * level, then verifies 3 s more and auto-raises if you were not still.
- * Classification happens when the burst ENDS (~0.2 s after you finish the word).
+ * Calibrate (c): 5 s silence + 3 s verify, auto-raises if you moved.
+ * Call it SILENT, hands OFF pads, after re-seating any pad.
  *
- * Board: ESP32 Dev Module, Baud 115200. Wiring same as always:
- *   AD8232: 3V3->3V3  GND->GND  OUT->GPIO34  LO+->GPIO32  LO-->GPIO33
- *
- * KEYS:  c calibrate (SILENT, hands off pads!)   +/- HELP box lower edge x100
- *        t test alert   i info   r fast/slow   h/w/y/n/s marks
+ * Board: ESP32 Dev Module, Baud 115200
+ * Wiring: AD8232 3V3->3V3 GND->GND OUT->34 LO+->32 LO-->33
+ * Keys: c calibrate  +/- HELP box lower edge  t test  i info  r fast/slow  h/w/y/n/s marks
  */
 
 const int PIN_OUT = 34, PIN_LOP = 32, PIN_LON = 33;
@@ -49,37 +52,39 @@ bool firstSample = true;
 const int RING = 100;
 int ring[RING]; int ringIdx = 0;
 
-// ---------- detector V1.6 (range classifier) ----------
-int  burstLvl = 511;               // burst starts here (calibrated default)
-int  helpPeakMin = 800;            // HELP box: lower peak edge (weakest HELP 904, noise 715)
-const int HELP_PEAK_MAX = 1800;    // HELP box: upper peak edge (strongest HELP 1710)
-const unsigned long HELP_DUR_MIN = 150;   // HELP box: shortest word 150 ms (spikes 50-100)
-const unsigned long HELP_DUR_MAX = 1200;  // HELP box: longest single word 1150 ms
-const unsigned long BURST_GRACE_MS = 100; // dips <100 ms forgiven; spike PAIRS split apart
-const unsigned long REFRACTORY_MS = 1500; // a word that splits in two alerts only once
-const unsigned long BURST_MAX_MS   = 3000;// longer than this = not a word (fusion guard)
+// ---------- detector V1.7 (range classifier + spike warning) ----------
+int  burstLvl = 511;
+int  helpPeakMin = 800;
+const int HELP_PEAK_MAX = 2000;    // widened 1800->2000 (session5 loud burst 1961)
+const unsigned long HELP_DUR_MIN = 150;
+const unsigned long HELP_DUR_MAX = 1200;
+const unsigned long BURST_GRACE_MS = 100;
+const unsigned long REFRACTORY_MS = 1500;
+const unsigned long BURST_MAX_MS   = 3000;
 
 bool inBurst = false;
 unsigned long burstStart = 0, lastHigh = 0, lastFire = 0;
 int  burstPeak = 0, maxEnvEver = 0, helpCount = 0;
-
 unsigned long tS = 0, tP = 0;
+
+// spike-rate warning
+unsigned long spikeTimes[12]; int spikeCount = 0; int spikeIdx = 0;
 
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.6 (range classifier) ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.7 (range + spike check) ===="));
   Serial.println(F("baud=115200"));
   Serial.print(F("HELP box: peak "));   Serial.print(helpPeakMin);
   Serial.print(F("-"));                 Serial.print(HELP_PEAK_MAX);
   Serial.print(F("  AND  dur "));       Serial.print(HELP_DUR_MIN);
   Serial.print(F("-"));                 Serial.print(HELP_DUR_MAX);
-  Serial.println(F(" ms   (from 14 recorded HELPs)"));
+  Serial.println(F(" ms   (from 14 HELPs; session5 green-moved excluded)"));
   Serial.print(F("burst level="));      Serial.println(burstLvl);
   Serial.println(F("burst inside the box -> HELP; outside -> BURST + reason"));
   Serial.println(F("WATER/YES/NO: no box yet - unmeasured words may still read HELP"));
   Serial.println(F("after moving ANY pad: sit normally (no pressing pads), press c"));
   Serial.println(F("keys: c=calibrate, +/- box edge, t=test, i=info, r=speed, marks h w y n s"));
-  Serial.println(F("STATUE TEST: sit silent+still 20 s - HELP alerts during it = wire/pad problem"));
+  Serial.println(F("STATUE TEST: sit silent+still 20 s - HELP during it = wire/pad problem"));
   Serial.println(F("plotter: raw,env,peak,pads,thresh"));
   Serial.println(F("streaming..."));
 }
@@ -100,7 +105,24 @@ void fireHelp(int pk, unsigned long durMs) {
   Serial.println(F("############################################################"));
 }
 
+void noteSpike(unsigned long now) {
+  spikeTimes[spikeIdx] = now;
+  spikeIdx = (spikeIdx + 1) % 12;
+  if (spikeCount < 12) spikeCount++;
+  if (spikeCount >= 8) {
+    int recent = 0;
+    for (int i = 0; i < spikeCount; i++) if (now - spikeTimes[i] < 10000) recent++;
+    if (recent >= 8) {
+      Serial.println(F(">>> HINT: many short spikes (8+ in 10 s) — check GREEN pad contact, then press c while silent"));
+      spikeCount = 0;
+    }
+  }
+}
+
 void classifyBurst(unsigned long durMs) {
+  bool isShortSpike = (durMs < HELP_DUR_MIN && burstPeak >= helpPeakMin);
+  if (isShortSpike) noteSpike(burstStart);
+
   if (burstPeak >= helpPeakMin && burstPeak <= HELP_PEAK_MAX &&
       durMs    >= HELP_DUR_MIN  && durMs    <= HELP_DUR_MAX) {
     if (burstStart - lastFire >= REFRACTORY_MS) {
@@ -131,7 +153,7 @@ void sortBuf(int *b, int n) {
 
 void runCalibrate() {
   Serial.println(F(">>> CALIBRATE: sit SILENT + STILL, hands off pads... (5 s)"));
-  const int N = 100;                     // 100 x 50 ms = 5 s
+  const int N = 100;
   int buf[N];
   for (int i = 0; i < N; i++) {
     unsigned long st = millis();
@@ -146,7 +168,7 @@ void runCalibrate() {
   Serial.print(F("  p90=")); Serial.print(p90);
   Serial.print(F("  burst=")); Serial.println(burstLvl);
   Serial.println(F(">>> checking for 3 more seconds..."));
-  const int V = 60;                      // 60 x 50 ms = 3 s verify
+  const int V = 60;
   int vb[V];
   int above = 0;
   for (int i = 0; i < V; i++) {
@@ -166,7 +188,7 @@ void runCalibrate() {
   } else {
     Serial.println(F(">>> CALIBRATE OK"));
   }
-  inBurst = false; burstPeak = 0;
+  inBurst = false; burstPeak = 0; spikeCount = 0;
 }
 
 void setup() {
@@ -229,18 +251,17 @@ void loop() {
   unsigned long now = millis();
   if (now - tS >= (unsigned long)SAMPLE_MS) { tS = now; sample(); }
 
-  // ---------- burst profiler + range classifier (V1.6) ----------
   if (env >= burstLvl) {
     if (!inBurst) { inBurst = true; burstStart = now; burstPeak = env; }
     if (env > burstPeak) burstPeak = env;
     lastHigh = now;
-    if (now - burstStart > BURST_MAX_MS) {      // fusion guard
-      classifyBurst(now - burstStart);          // will read "too long"
+    if (now - burstStart > BURST_MAX_MS) {
+      classifyBurst(now - burstStart);
       Serial.println(F(">>> burst >3 s = pads moved or gates too low -> press c while silent"));
-      inBurst = false; burstPeak = 0;           // restart fresh next sample
+      inBurst = false; burstPeak = 0;
     }
   } else if (inBurst && now - lastHigh >= BURST_GRACE_MS) {
-    classifyBurst(lastHigh - burstStart);       // true time above burst level
+    classifyBurst(lastHigh - burstStart);
     inBurst = false; burstPeak = 0;
   }
 
