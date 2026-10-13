@@ -1,14 +1,16 @@
 /*
- * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.10
+ * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.11
  * -------------------------------------------------------
- * V1.10 = NEW PLACEMENT (13 Oct 2026 — your photo)
+ * V1.11 = CHIN-PLACEMENT RETUNE (13 Oct 2026 — your Values.txt 13:45)
  *   Two gel electrodes beneath chin, as you described:
  *     1. Yellow wire — submandibular LEFT of center: circular white gel patch
  *        directly under chin, clip pointing up
  *     2. Red wire — RIGHT side of neck / upper throat: circular white gel patch,
  *        clip pointing up
  *     Grey cables stream down front of green t-shirt.
- *   Previous shoulder/collarbone placements are history (see PAD_PLACEMENT.md).
+ *   Fix for new chin spot: HELPs there are shorter/weaker (your 13:45 log: 19 HELP tries
+ *   but only 3 fired — 16 bursts were 37-75ms, peak 589-1114, just below old 800x80 guard).
+ *   Previous box was too strict for submandibular placement.
  *   On new spot: press e to reset box, then c to calibrate (sit silent, hands OFF
  *   pads), then h/a/v will auto-learn the new neck signals — no values to feed.
  *
@@ -37,7 +39,7 @@
  *   All box changes (±, h-auto, a, e) are saved to ESP32 flash (Preferences)
  *   so they survive reboot. Press i to see current box any time.
  *
- * V1.10 defaults still 223 HELPs (will auto-adapt to new chin placement) (14 old + 209 new Values.txt):
+ * V1.11 defaults: peak 650-2000 x dur 45-1100 (tuned for chin: was 800x150) — from 223 HELPs + your 13:45 chin log (19 tries, 3 ok, 16 short 37-75ms)
  *      HELP = peak in [800 .. 2000] AND dur in [150 .. 1100] ms  (AND rule)
  *   From 223 HELPs: S1 1121-1710 350-1150 + S4 904/1624 150/400 + Values.txt 209 HELPs 802-1960 151-1009 ms
  *   Excluded (proven contact faults): S3 loose RL + S5 green moved (15 invalid marks)
@@ -66,17 +68,17 @@ int ring[RING]; int ringIdx = 0;
 
 // ---------- detector V1.8 (range classifier + auto-learn + spike warning) ----------
 // defaults = V1.7 box (stored to flash; changed by auto-learn)
-const int DEF_PK_MIN = 800;
+const int DEF_PK_MIN = 650; // lowered 800->650 for chin placement (your HELPs peaked 589-1114, not 802-1960)
 const int DEF_PK_MAX = 2000;
-const int DEF_DUR_MIN = 150;
-const int DEF_DUR_MAX = 1100; // tightened 1200->1100 from 209 HELPs max 1009 (Values.txt)
+const int DEF_DUR_MIN = 45;  // lowered 150->45 for chin placement (your HELPs dur 37-75ms, not 150+)
+const int DEF_DUR_MAX = 1100;
 int  helpPeakMin = DEF_PK_MIN;
 int  helpPeakMax = DEF_PK_MAX;
 unsigned long helpDurMin = DEF_DUR_MIN;
 unsigned long helpDurMax = DEF_DUR_MAX;
 
 int  burstLvl = 511;
-const unsigned long BURST_GRACE_MS = 100;
+const unsigned long BURST_GRACE_MS = 150; // 100->150 to merge split chin bursts (your HELP split into 37+43ms)
 const unsigned long REFRACTORY_MS = 1500;
 const unsigned long BURST_MAX_MS   = 3000;
 
@@ -128,13 +130,13 @@ void loadBox() {
   if (helpPeakMin < 50) helpPeakMin = DEF_PK_MIN;
   if (helpPeakMax > 4095) helpPeakMax = DEF_PK_MAX;
   if (helpPeakMax < helpPeakMin) { helpPeakMin = DEF_PK_MIN; helpPeakMax = DEF_PK_MAX; }
-  if (helpDurMin < 20) helpDurMin = DEF_DUR_MIN;
+  if (helpDurMin < 15) helpDurMin = DEF_DUR_MIN;
   if (helpDurMax > 5000) helpDurMax = DEF_DUR_MAX;
 }
 
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.10 (new chin placement + AUTO-LEARN + spike check) ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.11 (new chin placement + AUTO-LEARN + spike check) ===="));
   Serial.println(F("baud=115200"));
   Serial.print(F("HELP box: peak "));   Serial.print(helpPeakMin);
   Serial.print(F("-"));                 Serial.print(helpPeakMax);
@@ -224,8 +226,8 @@ void expandBoxForHelp(int pk, unsigned long dur) {
 }
 
 void autoLearnHelp(int pk, unsigned long dur) {
-  // guard: don't learn obvious spikes / noise as HELP
-  if (pk < 500 || dur < 80 || dur > 3000) {
+  // guard: chin HELPs are short/weak — accept down to 400/30ms (was 500/80)
+  if (pk < 400 || dur < 30 || dur > 3000) {
     Serial.print(F(">>> AUTO-LEARN ignored: burst peak=")); Serial.print(pk);
     Serial.print(F(" dur=")); Serial.print(dur);
     Serial.println(F("ms — too weak/short/long to be a word. Say HELP clearly and press h within 2 s."));
