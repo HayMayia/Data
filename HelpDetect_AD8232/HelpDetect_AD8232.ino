@@ -1,12 +1,12 @@
 /*
- * VocalBridge — HELP DETECTOR  V1.14 SIMPLE (13 Oct 2026)
+ * VocalBridge — HELP DETECTOR  V1.15 SENSITIVE (13 Oct 2026)
  * --------------------------------------------------------
  * SIMPLEST: No box tuning, no auto-learn, no 12 thresholds.
  * After you said "NO POSITIONS ARE WORKING" — this is the reset.
  *
  * How it works:
  *   1. Press c while SILENT (hands OFF pads) → sets burstLvl = silence + 60
- *   2. Say HELP normally → if burst peak > burstLvl+250 AND dur 50-1500ms → HELP!
+ *   2. Say HELP with SMALL mouth → if burst peak > burstLvl+150 AND dur 40-1500ms → HELP! (was +250/50 — needed big mouth)
  *      Otherwise → BURST too weak/short (printed)
  *   That's it. One calibrate, one threshold. Works on ANY chin/neck/shoulder spot
  *   because it follows YOUR silence, not a fixed 650/720/780.
@@ -14,7 +14,7 @@
  * Placement: keep your current Yellow=left under chin, Red=right neck,
  *   Grey leads down shirt, RL on shoulder bone (no heartbeat). Press pads 10s.
  *
- * Keys: c=calibrate  h=mark HELP  t=test  i=info  r=speed
+ * Keys: c=calibrate  h=mark  t=test  i=info  +/- sensitivity  r=speed ( - = easier, + = harder )
  *   (h just marks, does NOT change thresholds — no more 12 changes)
  * Board: ESP32 34=OUT 32=LO+ 33=LO-  Baud 115200
  */
@@ -34,10 +34,10 @@ void saveLvl(){ prefs.begin("helpdetect",false); prefs.putInt("burstLvl",burstLv
 void loadLvl(){ prefs.begin("helpdetect",true); burstLvl=prefs.getInt("burstLvl",400); prefs.end();}
 void banner(){
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.14 SIMPLE ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.15 SENSITIVE ===="));
   Serial.println(F("baud=115200  calibrates to YOUR silence"));
   Serial.print(F("burstLvl=")); Serial.println(burstLvl);
-  Serial.println(F("HELP = burst peak > burstLvl+250 AND dur 50-1500ms"));
+  Serial.println(F("HELP = burst peak > burstLvl+150 AND dur 40-1500ms (less mouth)"));
   Serial.println(F("PLACEMENT: Yellow left under chin, Red right neck, grey down shirt, RL shoulder"));
   Serial.println(F("keys: c=calibrate(silent!) h=mark t=test i=info r=speed"));
   Serial.println(F("streaming..."));
@@ -77,7 +77,7 @@ void printLine(){
   bool pads=(digitalRead(PIN_LOP)==LOW && digitalRead(PIN_LON)==LOW);
   Serial.print(F("raw:")); Serial.print(lastRaw); Serial.print(F(",env:")); Serial.print(env);
   Serial.print(F(",peak:")); Serial.print(peak); Serial.print(F(",pads:")); Serial.print(pads?1:0);
-  Serial.print(F(",thresh:")); Serial.print(burstLvl+250); Serial.print(F("  [t=")); Serial.print(millis()/1000.0,2); Serial.print(F("s]"));
+  Serial.print(F(",thresh:")); Serial.print(burstLvl+150); Serial.print(F("  [t=")); Serial.print(millis()/1000.0,2); Serial.print(F("s]"));
   if(!pads) Serial.print(F("  CHECK-PADS!")); Serial.println();
 }
 void handle(char c){
@@ -89,17 +89,19 @@ void handle(char c){
   else if(c=='c'||c=='C') doCal();
   else if(c=='t'||c=='T'){ Serial.println(F(">>> HELP! (TEST)")); }
   else if(c=='i'||c=='I') banner();
+  else if(c=='+'||c=='='){ burstLvl+=20; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+150); Serial.println(F(" (harder)")); }
+  else if(c=='-'||c=='_'){ burstLvl-=20; if(burstLvl<50) burstLvl=50; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+150); Serial.println(F(" (easier)")); }
   else if(c=='r'||c=='R'){ printMs=(printMs==50)?250:50; Serial.println(printMs==250?F("slow"):F("fast")); }
 }
 void classify(unsigned long dur){
-  int thr=burstLvl+250;
-  if(burstPeak>=thr && dur>=50 && dur<=1500){
+  int thr=burstLvl+150; // +150 not +250: needs less mouth opening (you said big mouth worked)
+  if(burstPeak>=thr && dur>=40 && dur<=1500){
     if(millis()-lastFire>=REFRACT){ fire(burstPeak,dur); lastFire=burstStart; }
     else { Serial.print(F(">>> BURST peak=")); Serial.print(burstPeak); Serial.print(F(" dur=")); Serial.print(dur); Serial.println(F("ms -> echo skipped")); }
   } else {
     Serial.print(F(">>> BURST peak=")); Serial.print(burstPeak); Serial.print(F(" dur=")); Serial.print(dur); Serial.print(F("ms -> NOT HELP ("));
-    if(burstPeak<thr) Serial.print(F("too weak"));
-    else if(dur<50) Serial.print(F("too short"));
+    if(burstPeak<thr) Serial.print(F("too weak (open a bit more)"));
+    else if(dur<40) Serial.print(F("too short"));
     else Serial.print(F("too long"));
     Serial.println(F(")"));
   }
