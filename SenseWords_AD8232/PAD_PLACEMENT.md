@@ -1,5 +1,20 @@
 # Pad placement — speech muscle recording (AD8232)
 
+**CURRENT (13 Oct 2026) — your photo:** Two gel electrodes beneath chin, grey cables down green t-shirt:
+
+| Wire | Where exactly | Patch |
+|---|---|---|
+| **Yellow** | **Submandibular LEFT of center** — circular white gel patch directly underneath chin, slightly left of centerline, clip pointing **upwards** | white circular gel |
+| **Red** | **Right side of neck / upper throat** — circular white gel patch on right neck, clip pointing **upwards** | white circular gel |
+
+Grey lead cables from both stream down across front of shirt. Press each patch firmly 10 s after placement, then sit normally (no pressing pads) and press `c` to calibrate.
+
+---
+
+## Previous placements (history — do not use for current study)
+
+# Pad placement — speech muscle recording (AD8232)
+
 Match the label on your sensor cable: **RA**, **LA**, **RL** (RL is usually the **green** cable).
 Pictures: `pad_placement_shoulderRL.png` (RL on the shoulder — recommended for everyone)
 and `pad_placement.png` (RL on the chest bone — alternative, only if preferred).
