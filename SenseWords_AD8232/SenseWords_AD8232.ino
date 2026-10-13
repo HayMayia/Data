@@ -20,7 +20,7 @@
  *   s = mark "silence (said nothing)"
  *   r = fast/slow lines             i = reprint this info
  *
- * Pads: see pad_placement.png / PAD_PLACEMENT.md in this folder.
+ * Placement 13 Oct (current): YELLOW=left submandibular under chin, RED=right neck/upper throat (grey leads down shirt). See PAD_PLACEMENT.md.
  */
 
 const int PIN_OUT = 34;   // AD8232 OUT  (ADC1_CH6, input-only pin)
@@ -44,10 +44,10 @@ unsigned long tS = 0, tP = 0;
 // ---------- boot banner (written so the Plotter ignores every line) ----------
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge SENSE-WORDS (record-only, no deciding) ===="));
-  Serial.println(F("version=SenseV1.1 baud=115200"));
+  Serial.println(F("==== VocalBridge SENSE-WORDS V1.2 (record-only, no deciding) ===="));
+  Serial.println(F("version=SenseV1.2 baud=115200"));
   Serial.println(F("wiring: OUT=GPIO34,LO+=GPIO32,LO-=GPIO33,VIN=3V3,GND=GND"));
-  Serial.println(F("pads: RA and LA under the chin (two finger-widths apart), RL on the bony top of the shoulder"));
+  Serial.println(F("placement 13 Oct: Yellow=left under chin, Red=right neck/upper throat (grey cables down shirt)"));
   Serial.println(F("plotter curves: raw,env,peak,pads   (PADS must stay one)"));
   Serial.println(F("mark keys: h=HELP,w=WATER,y=YES,n=NO,s=silent"));
   Serial.println(F("keys: r=fast/slow lines, i=this info"));

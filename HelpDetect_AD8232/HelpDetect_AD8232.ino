@@ -1,6 +1,17 @@
 /*
- * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.9
- * ------------------------------------------------------
+ * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.10
+ * -------------------------------------------------------
+ * V1.10 = NEW PLACEMENT (13 Oct 2026 — your photo)
+ *   Two gel electrodes beneath chin, as you described:
+ *     1. Yellow wire — submandibular LEFT of center: circular white gel patch
+ *        directly under chin, clip pointing up
+ *     2. Red wire — RIGHT side of neck / upper throat: circular white gel patch,
+ *        clip pointing up
+ *     Grey cables stream down front of green t-shirt.
+ *   Previous shoulder/collarbone placements are history (see PAD_PLACEMENT.md).
+ *   On new spot: press e to reset box, then c to calibrate (sit silent, hands OFF
+ *   pads), then h/a/v will auto-learn the new neck signals — no values to feed.
+ *
  * V1.9 = AUTO-LEARN + NEW VALUES (209 HELPs from your Values.txt, 12 Oct 2026)
  *   You asked: "just write h and it changes. And a and v do the same. And when
  *   I said HELP in similar pattern, it said HELP as well."  -> DONE.
@@ -26,7 +37,7 @@
  *   All box changes (±, h-auto, a, e) are saved to ESP32 flash (Preferences)
  *   so they survive reboot. Press i to see current box any time.
  *
- * V1.9 defaults from 223 HELPs (14 old + 209 new Values.txt):
+ * V1.10 defaults still 223 HELPs (will auto-adapt to new chin placement) (14 old + 209 new Values.txt):
  *      HELP = peak in [800 .. 2000] AND dur in [150 .. 1100] ms  (AND rule)
  *   From 223 HELPs: S1 1121-1710 350-1150 + S4 904/1624 150/400 + Values.txt 209 HELPs 802-1960 151-1009 ms
  *   Excluded (proven contact faults): S3 loose RL + S5 green moved (15 invalid marks)
@@ -38,6 +49,7 @@
  *
  * Board: ESP32 Dev Module, Baud 115200
  * Wiring: AD8232 3V3->3V3 GND->GND OUT->34 LO+->32 LO-->33
+ * Placement 13 Oct: YELLOW=submandibular left of center under chin, RED=right neck/upper throat (grey leads down shirt)
  * Keys: full list below in banner
  */
 #include <Preferences.h>
@@ -122,7 +134,7 @@ void loadBox() {
 
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.9 (range + AUTO-LEARN + spike check) ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.10 (new chin placement + AUTO-LEARN + spike check) ===="));
   Serial.println(F("baud=115200"));
   Serial.print(F("HELP box: peak "));   Serial.print(helpPeakMin);
   Serial.print(F("-"));                 Serial.print(helpPeakMax);
@@ -133,7 +145,7 @@ void printBanner() {
   Serial.println(F("burst inside the box -> HELP; outside -> BURST + reason"));
   Serial.println(F("WATER/YES/NO: collected but no alert box yet - helps for next tuning"));
   Serial.print(F("learned HELP examples this session: ")); Serial.println(helpExCount);
-  Serial.println(F("after moving ANY pad: re-seat firmly 10 s, sit SILENT hands OFF pads, press c"));
+  Serial.println(F("PLACEMENT 13 Oct: Yellow=left submandibular under chin, Red=right neck/upper throat (grey cables down shirt)"));
   Serial.println(F("keys: c=calibrate  h/w/y/n=mark + AUTO-LEARN  a=recompute box  v=view  e/z=erase"));
   Serial.println(F("      +/- box low edge  t=test  i=info  r=speed"));
   Serial.println(F("STATUE TEST: sit silent+still 20 s - HELP during it = wire/pad problem"));
