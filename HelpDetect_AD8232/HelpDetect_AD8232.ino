@@ -1,12 +1,12 @@
 /*
- * VocalBridge — HELP DETECTOR  V1.16 LESS-MOUTH (13 Oct 2026)
+ * VocalBridge — HELP DETECTOR  V1.17 SMALL-MOUTH (13 Oct 2026)
  * --------------------------------------------------------
  * SIMPLEST: No box tuning, no auto-learn, no 12 thresholds.
  * After you said "NO POSITIONS ARE WORKING" — this is the reset.
  *
  * How it works:
- *   1. Press c while SILENT (hands OFF pads) → sets burstLvl = silence + 60
- *   2. Say HELP small mouth → if peak > burstLvl+120 AND dur 35-1500ms → HELP! (V1.14 +250 needed big mouth 700; your small 502 now fires)
+ *   1. Press c while SILENT (hands OFF pads) → sets burstLvl = silence + 30  (was 60: lower base for small mouth)
+ *   2. Say HELP small mouth → if peak > burstLvl+30 AND dur 8-1500ms → HELP! (V1.16 +120/35 still needed big 614/532; your small 363-410 now fires)
  *      Otherwise → BURST too weak/short (printed)
  *   That's it. One calibrate, one threshold. Works on ANY chin/neck/shoulder spot
  *   because it follows YOUR silence, not a fixed 650/720/780.
@@ -34,10 +34,10 @@ void saveLvl(){ prefs.begin("helpdetect",false); prefs.putInt("burstLvl",burstLv
 void loadLvl(){ prefs.begin("helpdetect",true); burstLvl=prefs.getInt("burstLvl",400); prefs.end();}
 void banner(){
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.16 LESS-MOUTH ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.17 SMALL-MOUTH ===="));
   Serial.println(F("baud=115200  calibrates to YOUR silence"));
   Serial.print(F("burstLvl=")); Serial.println(burstLvl);
-  Serial.println(F("HELP = peak > burstLvl+120 AND dur 35-1500ms (small mouth, your 502/131 now HELP)"));
+  Serial.println(F("HELP = peak > burstLvl+30 AND dur 8-1500ms (small mouth 363-410 now HELP)"));
   Serial.println(F("PLACEMENT: Yellow left under chin, Red right neck, grey down shirt, RL shoulder"));
   Serial.println(F("keys: c=calibrate(silent!) h=mark t=test i=info r=speed"));
   Serial.println(F("streaming..."));
@@ -56,7 +56,7 @@ void doCal(){
   for(int i=0;i<N;i++){ unsigned long st=millis(); while(millis()-st<50){ int raw=analogRead(PIN_OUT); lastRaw=raw; if(firstSample){center=raw; firstSample=false;} center+=(raw-center)/1024; int dev=abs(raw-center); if(dev>env) env=dev; else env=(env*97)/100; if(env>maxEnvEver) maxEnvEver=env; ring[ringIdx]=env; ringIdx=(ringIdx+1)%RING; delay(2);} buf[i]=env; }
   for(int i=0;i<N-1;i++) for(int j=i+1;j<N;j++) if(buf[j]<buf[i]){int t=buf[i];buf[i]=buf[j];buf[j]=t;}
   int p90=(buf[N-11]+buf[N-10])/2;
-  burstLvl=p90+60;
+  burstLvl=p90+30; // V1.17 +30 not +60: lower base so small mouth stays above longer
   Serial.print(F(">>> burstLvl=")); Serial.println(burstLvl); Serial.println(F(">>> CALIBRATE OK — say HELP normally, should fire")); saveLvl(); inBurst=false; burstPeak=0;
 }
 void setup(){
@@ -77,7 +77,7 @@ void printLine(){
   bool pads=(digitalRead(PIN_LOP)==LOW && digitalRead(PIN_LON)==LOW);
   Serial.print(F("raw:")); Serial.print(lastRaw); Serial.print(F(",env:")); Serial.print(env);
   Serial.print(F(",peak:")); Serial.print(peak); Serial.print(F(",pads:")); Serial.print(pads?1:0);
-  Serial.print(F(",thresh:")); Serial.print(burstLvl+120); Serial.print(F("  [t=")); Serial.print(millis()/1000.0,2); Serial.print(F("s]"));
+  Serial.print(F(",thresh:")); Serial.print(burstLvl+30); Serial.print(F("  [t=")); Serial.print(millis()/1000.0,2); Serial.print(F("s]"));
   if(!pads) Serial.print(F("  CHECK-PADS!")); Serial.println();
 }
 void handle(char c){
@@ -89,19 +89,19 @@ void handle(char c){
   else if(c=='c'||c=='C') doCal();
   else if(c=='t'||c=='T'){ Serial.println(F(">>> HELP! (TEST)")); }
   else if(c=='i'||c=='I') banner();
-  else if(c=='+'||c=='='){ burstLvl+=15; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+120); Serial.println(F(" (harder)")); }
-  else if(c=='-'||c=='_'){ burstLvl-=15; if(burstLvl<50) burstLvl=50; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+120); Serial.println(F(" (easier)")); }
+  else if(c=='+'||c=='='){ burstLvl+=10; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+30); Serial.println(F(" (harder)")); }
+  else if(c=='-'||c=='_'){ burstLvl-=10; if(burstLvl<50) burstLvl=50; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+30); Serial.println(F(" (easier)")); }
   else if(c=='r'||c=='R'){ printMs=(printMs==50)?250:50; Serial.println(printMs==250?F("slow"):F("fast")); }
 }
 void classify(unsigned long dur){
-  int thr=burstLvl+120; // +120 not +250: your log big 700 fired, small 502 (26.28s dur131) was 105 below 607 — now 25 above
-  if(burstPeak>=thr && dur>=35 && dur<=1500){
+  int thr=burstLvl+30; // V1.17 +30 not +120: your V1.16 log small 363-410 at 4.87-21.81s were 67-114 below 477; now 6-53 above 387->357 // dur 8 not 35: your 532/29 at 12.19s was 6ms short, 363/1 etc now need sustain ~10ms
+  if(burstPeak>=thr && dur>=8 && dur<=1500){
     if(millis()-lastFire>=REFRACT){ fire(burstPeak,dur); lastFire=burstStart; }
     else { Serial.print(F(">>> BURST peak=")); Serial.print(burstPeak); Serial.print(F(" dur=")); Serial.print(dur); Serial.println(F("ms -> echo skipped")); }
   } else {
     Serial.print(F(">>> BURST peak=")); Serial.print(burstPeak); Serial.print(F(" dur=")); Serial.print(dur); Serial.print(F("ms -> NOT HELP ("));
-    if(burstPeak<thr) Serial.print(F("too weak"));
-    else if(dur<35) Serial.print(F("too short"));
+    if(burstPeak<thr) Serial.print(F("too weak (small mouth? try -)"));
+    else if(dur<8) Serial.print(F("too short (say HELP longer)"));
     else Serial.print(F("too long"));
     Serial.println(F(")"));
   }
