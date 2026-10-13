@@ -1,5 +1,5 @@
 /*
- * VocalBridge — HELP SPEAKER  V1.0 (13 Oct 2026)
+ * VocalBridge — HELP SPEAKER  V1.1 (13 Oct 2026)
  * --------------------------------------------------------
  * SAME CONNECTIONS AS BEFORE — just add speaker:
  *   AD8232: OUT->GPIO34  LO+->GPIO32  LO- ->GPIO33  3V3/GND
@@ -8,7 +8,7 @@
  *   Placement: Yellow left under chin, Red right neck, grey down shirt, RL shoulder
  *
  * What it does: when you say HELP (small mouth) it SPEAKS HELP in your voice.
- * Detection = V1.21 CALIB-FIX (+90/25) — burstLvl = silence+60, HELP = peak>burstLvl+90 dur25-1500
+ * Detection = V1.22 SMALL-EASY (+40/12) — burstLvl = silence+60, HELP = peak>burstLvl+40 dur12-1500
  * Voice = your own HELP (help_own_v3_word.wav) 24000Hz via MAX98357A
  *
  * Keys: c=calibrate(silent hands OFF!)  h=mark  t=test-speak  i=info  +/- sens  r=speed  v=volume
@@ -53,10 +53,10 @@ void saveLvl(){ prefs.begin("helpdetect",false); prefs.putInt("burstLvl",burstLv
 void loadLvl(){ prefs.begin("helpdetect",true); burstLvl=prefs.getInt("burstLvl",400); prefs.end(); if(burstLvl>600) burstLvl=400; }
 
 void banner(){
-  Serial.println(); Serial.println(F("==== VocalBridge HELP SPEAKER V1.0 (AD8232+MAX98357A) ===="));
+  Serial.println(); Serial.println(F("==== VocalBridge HELP SPEAKER V1.1 (AD8232+MAX98357A) ===="));
   Serial.println(F("AD8232: OUT=34 LO+=32 LO-=33   MAX98357A: BCLK=27 LRC=26 DIN=25  5V/GND"));
   Serial.print(F("burstLvl=")); Serial.println(burstLvl);
-  Serial.println(F("HELP = peak>burstLvl+90 dur25-1500 -> SPEAKS HELP (your voice)"));
+  Serial.println(F("HELP = peak>burstLvl+40 dur12-1500 -> SPEAKS HELP (small mouth)"));
   Serial.println(F("PLACEMENT: Yellow left chin, Red right neck, grey down shirt, RL shoulder"));
   Serial.println(F("keys: c=calibrate(silent hands OFF!) h=mark t=test i=info r=speed v=volume +/- sens b=beep"));
   Serial.println(F("streaming..."));
@@ -108,7 +108,7 @@ void printLine(){
   bool pads=(digitalRead(PIN_LOP)==LOW && digitalRead(PIN_LON)==LOW);
   Serial.print(F("raw:")); Serial.print(lastRaw); Serial.print(F(",env:")); Serial.print(env);
   Serial.print(F(",peak:")); Serial.print(peak); Serial.print(F(",pads:")); Serial.print(pads?1:0);
-  Serial.print(F(",thresh:")); Serial.print(burstLvl+90); Serial.print(F("  [t=")); Serial.print(millis()/1000.0,2); Serial.print(F("s]"));
+  Serial.print(F(",thresh:")); Serial.print(burstLvl+40); Serial.print(F("  [t=")); Serial.print(millis()/1000.0,2); Serial.print(F("s]"));
   if(!pads) Serial.print(F("  CHECK-PADS!")); Serial.println();
 }
 void handle(char c){
@@ -117,20 +117,20 @@ void handle(char c){
   else if(c=='c'||c=='C') doCal();
   else if(c=='t'||c=='T'){ Serial.println(F(">>> HELP! (TEST) -> SPEAKING")); sayHELP(); }
   else if(c=='i'||c=='I') banner();
-  else if(c=='+'||c=='='){ burstLvl+=10; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+90); Serial.println(F(" (harder)")); }
-  else if(c=='-'||c=='_'){ burstLvl-=10; if(burstLvl<50) burstLvl=50; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+90); Serial.println(F(" (easier)")); }
+  else if(c=='+'||c=='='){ burstLvl+=10; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+40); Serial.println(F(" (harder)")); }
+  else if(c=='-'||c=='_'){ burstLvl-=10; if(burstLvl<50) burstLvl=50; saveLvl(); Serial.print(F(">>> thresh now ")); Serial.print(burstLvl+40); Serial.println(F(" (easier)")); }
   else if(c=='r'||c=='R'){ printMs=(printMs==50)?250:50; Serial.println(printMs==250?F("slow"):F("fast")); }
   else if(c=='v'||c=='V'){ if(volume<21) volume++; else volume=10; Serial.print(F(">>> volume ")); Serial.println(volume); }
   else if(c=='b'||c=='B'){ Serial.println(F(">>> beep")); playTone(880,150); delay(120); playTone(440,450); }
 }
 void classify(unsigned long dur){
-  int thr=burstLvl+90;
-  if(burstPeak>=thr && dur>=25 && dur<=1500){
+  int thr=burstLvl+40;
+  if(burstPeak>=thr && dur>=12 && dur<=1500){
     if(millis()-lastFire>=REFRACT){ fire(burstPeak,dur); lastFire=burstStart; }
     else { Serial.print(F(">>> BURST peak=")); Serial.print(burstPeak); Serial.print(F(" dur=")); Serial.print(dur); Serial.println(F("ms -> echo skipped")); }
   } else {
     Serial.print(F(">>> BURST peak=")); Serial.print(burstPeak); Serial.print(F(" dur=")); Serial.print(dur); Serial.print(F("ms -> NOT HELP ("));
-    if(burstPeak<thr) Serial.print(F("too weak")); else if(dur<25) Serial.print(F("too short")); else Serial.print(F("too long")); Serial.println(F(")"));
+    if(burstPeak<thr) Serial.print(F("too weak")); else if(dur<12) Serial.print(F("too short")); else Serial.print(F("too long")); Serial.println(F(")"));
   }
 }
 void loop(){
