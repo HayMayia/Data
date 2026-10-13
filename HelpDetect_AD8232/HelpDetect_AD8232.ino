@@ -1,12 +1,12 @@
 /*
- * VocalBridge — HELP DETECTOR  V1.20 SIMPLE-DECREASED (13 Oct 2026)
+ * VocalBridge — HELP DETECTOR  V1.21 CALIB-FIX (13 Oct 2026)
  * --------------------------------------------------------
  * SIMPLEST: No box tuning, no auto-learn, no 12 thresholds.
  * After you said "NO POSITIONS ARE WORKING" — this is the reset.
  *
  * How it works:
  *   1. Press c while SILENT (hands OFF pads) → sets burstLvl = silence + 60
- *   2. Say HELP small mouth → if peak > burstLvl+90 AND dur 25-1500ms → HELP! (was +120/35 needed big 614; just decreased -30/-10 as you asked)
+ *   2. Say HELP small mouth → if peak > burstLvl+90 AND dur 25-1500ms → HELP! (same as V1.20; now warns if calibrate bad)
  *      Otherwise → BURST too weak/short (printed)
  *   That's it. One calibrate, one threshold. Works on ANY chin/neck/shoulder spot
  *   because it follows YOUR silence, not a fixed 650/720/780.
@@ -31,13 +31,13 @@ int burstPeak=0, maxEnvEver=0, helpCnt=0;
 unsigned long tS=0,tP=0;
 Preferences prefs;
 void saveLvl(){ prefs.begin("helpdetect",false); prefs.putInt("burstLvl",burstLvl); prefs.end();}
-void loadLvl(){ prefs.begin("helpdetect",true); burstLvl=prefs.getInt("burstLvl",400); prefs.end();}
+void loadLvl(){ prefs.begin("helpdetect",true); burstLvl=prefs.getInt("burstLvl",400); prefs.end(); if(burstLvl>600){ burstLvl=400; } }
 void banner(){
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.20 SIMPLE-DECREASED ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.21 CALIB-FIX ===="));
   Serial.println(F("baud=115200  calibrates to YOUR silence"));
   Serial.print(F("burstLvl=")); Serial.println(burstLvl);
-  Serial.println(F("HELP = peak > burstLvl+90 AND dur 25-1500ms (just decreased -30/-10)"));
+  Serial.println(F("HELP = peak > burstLvl+90 AND dur 25-1500ms (V1.20 same; auto-fix bad calibrate)"));
   Serial.println(F("PLACEMENT: Yellow left under chin, Red right neck, grey down shirt, RL shoulder"));
   Serial.println(F("keys: c=calibrate(silent!) h=mark t=test i=info r=speed"));
   Serial.println(F("streaming..."));
@@ -57,6 +57,7 @@ void doCal(){
   for(int i=0;i<N-1;i++) for(int j=i+1;j<N;j++) if(buf[j]<buf[i]){int t=buf[i];buf[i]=buf[j];buf[j]=t;}
   int p90=(buf[N-11]+buf[N-10])/2;
   burstLvl=p90+60;
+  if(burstLvl>600){ Serial.print(F(">>> WARNING burstLvl=")); Serial.print(burstLvl); Serial.println(F(" too HIGH! Did you move/speak? Press c again SILENT hands OFF pads 5s")); burstLvl=400; Serial.println(F(">>> Reset burstLvl=400, press c again properly")); }
   Serial.print(F(">>> burstLvl=")); Serial.println(burstLvl); Serial.println(F(">>> CALIBRATE OK — say HELP normally, should fire")); saveLvl(); inBurst=false; burstPeak=0;
 }
 void setup(){
