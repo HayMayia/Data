@@ -1,16 +1,17 @@
 /*
- * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.11
+ * VocalBridge — HELP DETECTOR (HelpDetect_AD8232)  V1.12
  * -------------------------------------------------------
- * V1.11 = CHIN-PLACEMENT RETUNE (13 Oct 2026 — your Values.txt 13:45)
+ * V1.12 = FALSE-HELP FIX (13 Oct 2026 — your 585s log: HELP every second, thresh 513)
  *   Two gel electrodes beneath chin, as you described:
  *     1. Yellow wire — submandibular LEFT of center: circular white gel patch
  *        directly under chin, clip pointing up
  *     2. Red wire — RIGHT side of neck / upper throat: circular white gel patch,
  *        clip pointing up
  *     Grey cables stream down front of green t-shirt.
- *   Fix for new chin spot: HELPs there are shorter/weaker (your 13:45 log: 19 HELP tries
- *   but only 3 fired — 16 bursts were 37-75ms, peak 589-1114, just below old 800x80 guard).
- *   Previous box was too strict for submandibular placement.
+ *   V1.11 was too loose (650x45, grace150, guard400/30) → false HELP every ~1s
+ *   at 585-591s: peak 672-735 dur 35-41ms fired as HELP (thresh had dropped to 513).
+ *   Chin HELPs need 800x100, not 650x45 — your 3 good HELPs were 911-1472 x223-327ms,
+ *   your 16 missed were 37-75ms spikes, not words (correctly ignored).
  *   On new spot: press e to reset box, then c to calibrate (sit silent, hands OFF
  *   pads), then h/a/v will auto-learn the new neck signals — no values to feed.
  *
@@ -39,7 +40,7 @@
  *   All box changes (±, h-auto, a, e) are saved to ESP32 flash (Preferences)
  *   so they survive reboot. Press i to see current box any time.
  *
- * V1.11 defaults: peak 650-2000 x dur 45-1100 (tuned for chin: was 800x150) — from 223 HELPs + your 13:45 chin log (19 tries, 3 ok, 16 short 37-75ms)
+ * V1.12 defaults: peak 780-2000 x dur 110-1100 (was 650x45 too loose) — from 223 HELPs + chin log 19tries/3 HELP (911-1472 x223-327 keep, 35-41ms spikes reject)
  *      HELP = peak in [800 .. 2000] AND dur in [150 .. 1100] ms  (AND rule)
  *   From 223 HELPs: S1 1121-1710 350-1150 + S4 904/1624 150/400 + Values.txt 209 HELPs 802-1960 151-1009 ms
  *   Excluded (proven contact faults): S3 loose RL + S5 green moved (15 invalid marks)
@@ -68,9 +69,9 @@ int ring[RING]; int ringIdx = 0;
 
 // ---------- detector V1.8 (range classifier + auto-learn + spike warning) ----------
 // defaults = V1.7 box (stored to flash; changed by auto-learn)
-const int DEF_PK_MIN = 650; // lowered 800->650 for chin placement (your HELPs peaked 589-1114, not 802-1960)
+const int DEF_PK_MIN = 780; // restored 650->780 (was 800): rejects 672-735 spikes at 585s, keeps 911+ HELPs
 const int DEF_PK_MAX = 2000;
-const int DEF_DUR_MIN = 45;  // lowered 150->45 for chin placement (your HELPs dur 37-75ms, not 150+)
+const int DEF_DUR_MIN = 110; // restored 45->110 (was 150): rejects 35-41ms spikes, keeps 147-327ms HELPs (was 45 caused false HELP)
 const int DEF_DUR_MAX = 1100;
 int  helpPeakMin = DEF_PK_MIN;
 int  helpPeakMax = DEF_PK_MAX;
@@ -78,7 +79,7 @@ unsigned long helpDurMin = DEF_DUR_MIN;
 unsigned long helpDurMax = DEF_DUR_MAX;
 
 int  burstLvl = 511;
-const unsigned long BURST_GRACE_MS = 150; // 100->150 to merge split chin bursts (your HELP split into 37+43ms)
+const unsigned long BURST_GRACE_MS = 120; // 150->120: merge without fusing 1-sec spaced spikes
 const unsigned long REFRACTORY_MS = 1500;
 const unsigned long BURST_MAX_MS   = 3000;
 
@@ -127,16 +128,16 @@ void loadBox() {
   if (savedLvl > 0) burstLvl = savedLvl; // 0 = not yet saved, keep 511 until first calibrate
   prefs.end();
   // clamp sanity
-  if (helpPeakMin < 50) helpPeakMin = DEF_PK_MIN;
+  if (helpPeakMin < 600) helpPeakMin = DEF_PK_MIN;
   if (helpPeakMax > 4095) helpPeakMax = DEF_PK_MAX;
   if (helpPeakMax < helpPeakMin) { helpPeakMin = DEF_PK_MIN; helpPeakMax = DEF_PK_MAX; }
-  if (helpDurMin < 15) helpDurMin = DEF_DUR_MIN;
+  if (helpDurMin < 80) helpDurMin = DEF_DUR_MIN;
   if (helpDurMax > 5000) helpDurMax = DEF_DUR_MAX;
 }
 
 void printBanner() {
   Serial.println();
-  Serial.println(F("==== VocalBridge HELP DETECTOR V1.11 (new chin placement + AUTO-LEARN + spike check) ===="));
+  Serial.println(F("==== VocalBridge HELP DETECTOR V1.12 (new chin placement + AUTO-LEARN + spike check) ===="));
   Serial.println(F("baud=115200"));
   Serial.print(F("HELP box: peak "));   Serial.print(helpPeakMin);
   Serial.print(F("-"));                 Serial.print(helpPeakMax);
@@ -203,9 +204,9 @@ void expandBoxForHelp(int pk, unsigned long dur) {
   bool changed = false;
   int newPkMin = helpPeakMin, newPkMax = helpPeakMax;
   unsigned long newDurMin = helpDurMin, newDurMax = helpDurMax;
-  if (pk < helpPeakMin) { newPkMin = max(50, pk - 60); changed = true; }
+  if (pk < helpPeakMin) { newPkMin = max(650, pk - 60); changed = true; } // floor 650 prevents thresh dropping to 513
   if (pk > helpPeakMax) { newPkMax = min(4095, pk + 60); changed = true; }
-  if (dur < helpDurMin) { newDurMin = (dur > 35) ? dur - 35 : 20; changed = true; }
+  if (dur < helpDurMin) { newDurMin = max(80, (int)dur - 35); changed = true; } // floor 80 prevents 35ms spikes
   if (dur > helpDurMax) { newDurMax = dur + 35; if (newDurMax > 4000) newDurMax = 4000; changed = true; }
   if (changed) {
     helpPeakMin = newPkMin; helpPeakMax = newPkMax;
@@ -226,8 +227,8 @@ void expandBoxForHelp(int pk, unsigned long dur) {
 }
 
 void autoLearnHelp(int pk, unsigned long dur) {
-  // guard: chin HELPs are short/weak — accept down to 400/30ms (was 500/80)
-  if (pk < 400 || dur < 30 || dur > 3000) {
+  // guard: reject spikes — need real word length/strength (was 400/30 too loose → false HELP)
+  if (pk < 600 || dur < 70 || dur > 3000) {
     Serial.print(F(">>> AUTO-LEARN ignored: burst peak=")); Serial.print(pk);
     Serial.print(F(" dur=")); Serial.print(dur);
     Serial.println(F("ms — too weak/short/long to be a word. Say HELP clearly and press h within 2 s."));
@@ -260,9 +261,9 @@ void recomputeBoxFromTraining() {
     if (helpDurs[i] < mnDur) mnDur = helpDurs[i];
     if (helpDurs[i] > mxDur) mxDur = helpDurs[i];
   }
-  int newPkMin = max(50, mnPk - 70);
+  int newPkMin = max(650, mnPk - 70);
   int newPkMax = min(4095, mxPk + 70);
-  unsigned long newDurMin = (mnDur > 40) ? mnDur - 40 : 20;
+  unsigned long newDurMin = max(80, (int)mnDur - 40);
   unsigned long newDurMax = mxDur + 40;
   helpPeakMin = newPkMin; helpPeakMax = newPkMax;
   helpDurMin = newDurMin; helpDurMax = newDurMax;
