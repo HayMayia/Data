@@ -1,6 +1,6 @@
 /*
  * VocalBridge v2.0-BLE-FINAL — USER ESP32 (BLE + Speaker)
- * 5 voices: HELP, WATER, YES, NO, PAIN — 8kHz downsampled, fits default partition
+ * 4 voices: HELP, WATER, YES, NO — 8kHz downsampled, fits default partition
  * Auto-detect ONLY fires on recorded signature match — no false HELPs
  * Serial: reads complete lines — no missed keypresses
  */
@@ -15,7 +15,6 @@
 #include "water_voice.h"
 #include "yes_voice.h"
 #include "no_voice.h"
-#include "pain_voice.h"
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_RX_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -30,10 +29,10 @@ const int PIN_DIN  = 25;
 
 const char* FIRMWARE_VERSION = "V2.0-BLE-FINAL";
 
-const int16_t* VOICE_PCM[5] = {HELP_PCM, WATER_PCM, YES_PCM, NO_PCM, PAIN_PCM};
-const uint32_t VOICE_LEN[5] = {HELP_NUM_SAMPLES, WATER_NUM_SAMPLES, YES_NUM_SAMPLES, NO_NUM_SAMPLES, PAIN_NUM_SAMPLES};
-const uint32_t VOICE_RATE[5] = {HELP_SAMPLE_RATE, WATER_SAMPLE_RATE, YES_SAMPLE_RATE, NO_SAMPLE_RATE, PAIN_SAMPLE_RATE};
-const char* VOICE_NAME[5] = {"HELP","WATER","YES","NO","PAIN"};
+const int16_t* VOICE_PCM[4] = {HELP_PCM, WATER_PCM, YES_PCM, NO_PCM};
+const uint32_t VOICE_LEN[4] = {HELP_NUM_SAMPLES, WATER_NUM_SAMPLES, YES_NUM_SAMPLES, NO_NUM_SAMPLES};
+const uint32_t VOICE_RATE[4] = {HELP_SAMPLE_RATE, WATER_SAMPLE_RATE, YES_SAMPLE_RATE, NO_SAMPLE_RATE};
+const char* VOICE_NAME[4] = {"HELP","WATER","YES","NO"};
 
 const int SAMPLE_MS = 2;
 int printMs = 500;
@@ -65,8 +64,8 @@ const unsigned long REC_MS = 3000;
 int recEnv[300];
 int recIdx = 0;
 
-int sigEnv[5][10] = {{0}};
-bool sigValid[5] = {false};
+int sigEnv[4][10] = {{0}};
+bool sigValid[4] = {false};
 
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
@@ -106,7 +105,7 @@ void applyVolume(int16_t *buf, int count){
 }
 
 void startVoice(int idx){
-  if(idx < 0 || idx > 4) return;
+  if(idx < 0 || idx > 3) return;
   activeVoice = idx;
   voicePos = 0;
   voiceBufCount = 0;
@@ -168,7 +167,7 @@ void loadLvl(){ prefs.begin("helpdetect", true); burstLvl = prefs.getInt("burstL
 
 void saveSignatures(){
   prefs.begin("helpdetect", false);
-  for(int w=0; w<5; w++){
+  for(int w=0; w<4; w++){
     prefs.putBool((String("sval") + String(w)).c_str(), sigValid[w]);
     if(sigValid[w]){
       prefs.putBytes((String("senv") + String(w)).c_str(), sigEnv[w], sizeof(sigEnv[w]));
@@ -179,7 +178,7 @@ void saveSignatures(){
 
 void loadSignatures(){
   prefs.begin("helpdetect", true);
-  for(int w=0; w<5; w++){
+  for(int w=0; w<4; w++){
     sigValid[w] = prefs.getBool((String("sval") + String(w)).c_str(), false);
     if(sigValid[w]){
       prefs.getBytes((String("senv") + String(w)).c_str(), sigEnv[w], sizeof(sigEnv[w]));
@@ -242,9 +241,9 @@ int matchVoice(int peakEnv){
   int bestIdx = -1;
   int bestDiff = 999999;
   bool anyValid = false;
-  for(int w=0; w<5; w++){ if(sigValid[w]) { anyValid = true; break; } }
+  for(int w=0; w<4; w++){ if(sigValid[w]) { anyValid = true; break; } }
   if(!anyValid) return -1;
-  for(int w=0; w<5; w++){
+  for(int w=0; w<4; w++){
     if(!sigValid[w]) continue;
     int sigMax = 0;
     for(int b=0; b<10; b++) if(sigEnv[w][b] > sigMax) sigMax = sigEnv[w][b];
@@ -271,7 +270,6 @@ void handleCommand(String cmd){
     else if(c=='w'||c=='W') wi=1;
     else if(c=='y'||c=='Y') wi=2;
     else if(c=='n'||c=='N') wi=3;
-    else if(c=='p'||c=='P') wi=4;
     if(wi >= 0){ startRecording(wi); }
     else { Serial.println(">>> Unknown word for recording"); }
     return;
@@ -279,7 +277,7 @@ void handleCommand(String cmd){
 
   if(c == 'r' || c == 'R'){
     waitingForRecordWord = true;
-    Serial.println(">>> Recording mode — press word key now (h/w/y/n/p)");
+    Serial.println(">>> Recording mode — press word key now (h/w/y/n)");
     return;
   }
 
@@ -291,7 +289,6 @@ void handleCommand(String cmd){
     case 'w': case 'W': Serial.println(">>> MARK: WATER"); startVoice(1); break;
     case 'y': case 'Y': Serial.println(">>> MARK: YES"); startVoice(2); break;
     case 'n': case 'N': Serial.println(">>> MARK: NO"); startVoice(3); break;
-    case 'p': case 'P': Serial.println(">>> MARK: PAIN"); startVoice(4); break;
     case 't': Serial.println(">>> TEST HELP"); startVoice(0); break;
     case 'x': case 'X': stopVoice(); break;
     case 'i': banner(); break;
@@ -308,7 +305,7 @@ void banner(){
   Serial.println("==== VocalBridge V2.0-BLE-FINAL ====");
   Serial.println("Auto-detect: ON — speak, it detects, it answers (real voices)");
   Serial.println("Type c to calibrate (5s silent). Then just speak.");
-  Serial.println("Serial: h=HELP w=WATER y=YES n=NO p=PAIN");
+  Serial.println("Serial: h=HELP w=WATER y=YES n=NO");
   Serial.println("r then word = record signature. x=stop audio. a=toggle auto. +/-=sens.");
   Serial.println("streaming...");
 }
