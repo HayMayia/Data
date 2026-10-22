@@ -4,9 +4,9 @@
   "display": "standalone",
   "name": "VocalBridge",
   "orientation": "any",
-  "scope": "/",
+  "scope": "/Data/",
   "short_name": "VCBR",
-  "start_url": "/",
+  "start_url": "/Data/",
   "theme_color": "#627e91",
   "icons": [
     {
