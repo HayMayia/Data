@@ -1,0 +1,25 @@
+{
+  "short_name": "VBridge",
+  "name": "VocalBridge",
+  "start_url": "/Data/",
+  "display": "standalone",
+  "background_color": "#FAF5E3",
+  "theme_color": "#F09819",
+  "description": "VocalBridge — Speech Detection Dashboard",
+  "icons": [
+    {
+      "src": "favicon.png?v=6",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png?v=6",
+      "sizes": "16x16",
+      "type": "image/png"
+    }
+  ],
+  "orientation": "portrait",
+  "scope": "/Data/",
+  "lang": "en",
+  "dir": "ltr"
+}
