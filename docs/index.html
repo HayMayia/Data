@@ -264,6 +264,12 @@ footer strong { color: var(--text-secondary); font-weight: 600; }
   color: var(--text); margin-bottom: 8px; }
 .dl-sub { font-size: 14px; color: var(--text-secondary); max-width: 540px;
   margin: 0 auto; line-height: 1.6; }
+.dl-toolbar { display: flex; justify-content: center; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.dl-detected { font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 7px 14px; border-radius: 999px; background: var(--surface-2);
+  border: 1px dashed var(--border); color: var(--text-secondary); }
+#dlShowAllBtn { width: auto; margin: 0; }
 .dl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 @media (max-width: 780px) { .dl-grid { grid-template-columns: 1fr; } }
 
@@ -272,7 +278,7 @@ footer strong { color: var(--text-secondary); font-weight: 600; }
   padding: 28px 22px 24px; background: var(--surface-2);
   border: 1px solid var(--border); border-radius: 18px; overflow: hidden;
   transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
-  box-shadow 0.28s, border-color 0.28s; }
+  box-shadow 0.28s, border-color 0.28s, opacity 0.28s, filter 0.28s; }
 .dl-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0;
   height: 3px; background: var(--dl-accent, var(--accent)); opacity: 0.9; }
 .dl-card:hover { transform: translateY(-6px);
@@ -285,6 +291,19 @@ footer strong { color: var(--text-secondary); font-weight: 600; }
 .dl-card.windows { --dl-accent: #0078D4; --dl-glow: rgba(0,120,212,0.32);
   --dl-btn-a: #0078D4; --dl-btn-b: #005A9E; }
 body.dark-mode .dl-card.ios { --dl-accent: #D8D8E2; --dl-glow: rgba(216,216,226,0.18); }
+
+.dl-card.is-recommended { order: -1;
+  border-color: var(--dl-accent, var(--accent));
+  box-shadow: 0 14px 36px var(--dl-glow, var(--accent-glow)); }
+.dl-card.is-recommended .dl-reco-pill { display: inline-flex; }
+.dl-card.is-dimmed { opacity: 0.55; filter: saturate(0.7); }
+.dl-card.is-dimmed:hover { opacity: 0.9; filter: saturate(1); }
+body.dl-show-all .dl-card.is-dimmed { opacity: 1; filter: none; }
+.dl-reco-pill { display: none; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 999px; font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--dl-accent, var(--accent)); background: var(--bg);
+  border: 1px solid var(--dl-accent, var(--accent)); }
 
 .dl-icon { width: 64px; height: 64px; border-radius: 18px;
   display: flex; align-items: center; justify-content: center;
@@ -311,6 +330,59 @@ body.dark-mode .dl-card.ios { --dl-accent: #D8D8E2; --dl-glow: rgba(216,216,226,
   box-shadow: 0 10px 26px var(--dl-glow, var(--accent-glow)); }
 .dl-btn:active { transform: translateY(0); }
 .dl-btn svg { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
+
+/* ---- Advanced install accordions (glassmorphism) ---- */
+.dl-accordions { display: flex; flex-direction: column; gap: 14px; margin-top: 22px; }
+details.glass-acc { background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden; transition: border-color 0.25s, box-shadow 0.25s;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+details.glass-acc[open] { border-color: var(--accent);
+  box-shadow: 0 12px 32px rgba(240,152,25,0.12); }
+details.glass-acc summary { list-style: none; cursor: pointer; user-select: none;
+  padding: 16px 20px; font-size: 13.5px; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 10px; }
+details.glass-acc summary::-webkit-details-marker { display: none; }
+details.glass-acc summary::after { content: '▾'; margin-left: auto;
+  color: var(--text-muted); transition: transform 0.25s; font-size: 14px; }
+details.glass-acc[open] summary::after { transform: rotate(180deg); }
+.acc-body { padding: 6px 20px 20px; border-top: 1px solid var(--border); }
+.acc-intro { font-size: 12.5px; color: var(--text-secondary);
+  line-height: 1.65; margin: 14px 0 16px; }
+.acc-steps { margin: 4px 0 16px; }
+.acc-step { display: flex; gap: 10px; margin-bottom: 10px;
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+.acc-step-num { width: 22px; height: 22px; flex-shrink: 0;
+  background: var(--accent); color: white; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; margin-top: 1px; }
+.acc-option { background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.acc-option-title { font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px; }
+.acc-option p { font-size: 12.5px; color: var(--text-secondary);
+  line-height: 1.65; margin-bottom: 10px; }
+.acc-option p:last-child { margin-bottom: 0; }
+.acc-option a { color: var(--accent); font-weight: 600; }
+.code-block { position: relative; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; padding-right: 78px; overflow-x: auto; }
+.code-block pre { font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  color: var(--text); white-space: pre-wrap; word-break: break-all; line-height: 1.7; }
+.copy-btn { position: absolute; top: 8px; right: 8px; width: auto; margin: 0;
+  padding: 5px 10px; font-size: 10px; font-weight: 700; border-radius: 7px;
+  background: var(--surface-2); color: var(--text-secondary);
+  border: 1px solid var(--border); cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+  transition: all 0.2s; }
+.copy-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+.acc-downloads { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.acc-dl-link { display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 15px; border-radius: 10px; background: var(--surface);
+  border: 1px solid var(--border); color: var(--text-secondary);
+  font-size: 11.5px; font-weight: 600; text-decoration: none;
+  font-family: 'JetBrains Mono', monospace; transition: all 0.2s; }
+.acc-dl-link:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
 
 /* iOS install instructions modal (shares .modal-content with update modal) */
 #iosModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -405,50 +477,123 @@ body.dark-mode .scanlines { background: linear-gradient(to bottom, rgba(0,0,0,0)
       <div class="dl-eyebrow">⬇ Get VocalBridge</div>
       <h2 class="dl-title">Download &amp; Install</h2>
       <p class="dl-sub">Bring VocalBridge to any device — direct downloads for Android and Windows, or install the web app on iOS in seconds.</p>
+      <div class="dl-toolbar">
+        <div id="dlDetected" class="dl-detected">Detecting your device…</div>
+        <button id="dlShowAllBtn" class="btn secondary small" type="button" onclick="toggleShowAllPlatforms()">Show all platform downloads</button>
+      </div>
     </div>
     <div class="dl-grid">
 
       <!-- Android -->
-      <article class="dl-card android">
+      <article class="dl-card android" data-platform="android">
         <div class="dl-icon" aria-hidden="true">
           <svg viewBox="0 0 576 512" xmlns="http://www.w3.org/2000/svg"><path d="M420.55,301.93a24,24,0,1,1,24-24,24,24,0,0,1-24,24m-265.1,0a24,24,0,1,1,24-24,24,24,0,0,1-24,24m273.7-144.48,47.94-83a10,10,0,1,0-17.27-10h0l-48.54,84.07a301.25,301.25,0,0,0-246.56,0L116.18,64.45a10,10,0,1,0-17.27,10h0l47.94,83C64.53,202.22,8.24,285.55,0,384H576c-8.24-98.45-64.54-181.78-146.85-226.55"/></svg>
         </div>
         <h3 class="dl-name">Download for Android</h3>
+        <div class="dl-reco-pill">✓ Recommended for your device</div>
         <div class="dl-badge">.APK Direct Download</div>
         <p class="dl-desc">Full VocalBridge app for Android phones &amp; tablets. Enable "Install unknown apps" for your browser if prompted.</p>
-        <a class="dl-btn" href="./VocalBridge.apk?v=20261022" download="VocalBridge.apk">
+        <a class="dl-btn" data-platform="android" href="./VocalBridge.apk?v=20261022" download="VocalBridge.apk">
           <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M216 0h80c13.3 0 24 10.7 24 24v168h87.7c17.8 0 26.7 21.5 14.1 34.1L269.7 378.3c-7.5 7.5-19.8 7.5-27.3 0L90.1 226.1c-12.6-12.6-3.7-34.1 14.1-34.1H192V24c0-13.3 10.7-24 24-24zm264 376v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h146.7l49 49c20.1 20.1 52.5 20.1 72.6 0l49-49H480c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"/></svg>
           Download for Android
         </a>
       </article>
 
       <!-- iOS / Web (PWA) -->
-      <article class="dl-card ios">
+      <article class="dl-card ios" data-platform="ios">
         <div class="dl-icon" aria-hidden="true">
           <svg viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
         </div>
         <h3 class="dl-name">Install on iOS / Web</h3>
+        <div class="dl-reco-pill">✓ Recommended for your device</div>
         <div class="dl-badge">Add to Home Screen (PWA)</div>
         <p class="dl-desc">No App Store needed — install VocalBridge straight from Safari and launch it like a native app.</p>
-        <button class="dl-btn" type="button" onclick="showIosModal()">
+        <button class="dl-btn" data-platform="ios" type="button" onclick="showIosModal()">
           <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M216 0h80c13.3 0 24 10.7 24 24v168h87.7c17.8 0 26.7 21.5 14.1 34.1L269.7 378.3c-7.5 7.5-19.8 7.5-27.3 0L90.1 226.1c-12.6-12.6-3.7-34.1 14.1-34.1H192V24c0-13.3 10.7-24 24-24zm264 376v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h146.7l49 49c20.1 20.1 52.5 20.1 72.6 0l49-49H480c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"/></svg>
           Install on iOS / Web
         </button>
       </article>
 
       <!-- Windows -->
-      <article class="dl-card windows">
+      <article class="dl-card windows" data-platform="windows">
         <div class="dl-icon" aria-hidden="true">
           <svg viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>
         </div>
         <h3 class="dl-name">Download for Windows</h3>
-        <div class="dl-badge">.ZIP Package</div>
-        <p class="dl-desc">Windows 10 / 11 desktop package. Extract the ZIP and double-click the installer — setup guide included.</p>
-        <a class="dl-btn" href="./VocalBridge-Windows.zip?v=20261022" download="VocalBridge-Windows.zip">
+        <div class="dl-reco-pill">✓ Recommended for your device</div>
+        <div class="dl-badge">.EXE Installer Package</div>
+        <p class="dl-desc">Windows 10 (1809+) / 11 installer package. Guided two-step setup below — takes two minutes.</p>
+        <a class="dl-btn" data-platform="windows" href="./VocalBridge.exe?v=20261022" download="VocalBridge.exe">
           <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M216 0h80c13.3 0 24 10.7 24 24v168h87.7c17.8 0 26.7 21.5 14.1 34.1L269.7 378.3c-7.5 7.5-19.8 7.5-27.3 0L90.1 226.1c-12.6-12.6-3.7-34.1 14.1-34.1H192V24c0-13.3 10.7-24 24-24zm264 376v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h146.7l49 49c20.1 20.1 52.5 20.1 72.6 0l49-49H480c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"/></svg>
           Download for Windows
         </a>
       </article>
+
+    </div>
+
+    <!-- ===== Advanced installation accordions ===== -->
+    <div class="dl-accordions">
+
+      <details class="glass-acc">
+        <summary>Advanced PowerShell &amp; Manual Setup</summary>
+        <div class="acc-body">
+          <p class="acc-intro">VocalBridge is distributed for Windows as an MSIX app package (custom development certificate). Windows 10 (build 1809+) / 11 requires <strong>Developer Mode</strong> or explicit package registration before first launch.</p>
+          <div class="acc-steps">
+            <div class="acc-step">
+              <div class="acc-step-num">1</div>
+              <div class="acc-step-text"><strong>Enable Developer Mode:</strong> press <strong>Win + I</strong> → <strong>Privacy &amp; security</strong> → <strong>For developers</strong> (or <em>System → Developer Settings</em> on Windows 10) → toggle <strong>Developer Mode</strong> ON → confirm <strong>Yes</strong>.</div>
+            </div>
+            <div class="acc-step">
+              <div class="acc-step-num">2</div>
+              <div class="acc-step-text"><strong>Install the package:</strong> download <strong>VocalBridge.msixbundle</strong> below, double-click it, click <strong>Install</strong> in the App Installer dialog, then <strong>Launch</strong> — or find VocalBridge in the Start Menu.</div>
+            </div>
+          </div>
+
+          <div class="acc-option">
+            <div class="acc-option-title">Option A — EXE installer (package + installer in one folder)</div>
+            <p>Download both files into the <em>same folder</em>, then run the installer from PowerShell / Command Prompt in that folder:</p>
+            <div class="code-block">
+              <button class="copy-btn" type="button" onclick="copyCode(this)">COPY</button>
+              <pre>.\VocalBridge.exe .\VocalBridge.sideload.msix</pre>
+            </div>
+          </div>
+
+          <div class="acc-option">
+            <div class="acc-option-title">Option B — PowerShell (unsigned / sideload packages)</div>
+            <p>Open PowerShell in the folder containing the package and run:</p>
+            <div class="code-block">
+              <button class="copy-btn" type="button" onclick="copyCode(this)">COPY</button>
+              <pre>Add-AppxPackage -Path ".\VocalBridge.msixbundle" -AllowUnsigned</pre>
+            </div>
+          </div>
+
+          <div class="acc-downloads">
+            <a class="acc-dl-link" href="./VocalBridge.msixbundle?v=20261022" download="VocalBridge.msixbundle">⬇ VocalBridge.msixbundle</a>
+            <a class="acc-dl-link" href="./VocalBridge.sideload.msix?v=20261022" download="VocalBridge.sideload.msix">⬇ VocalBridge.sideload.msix</a>
+            <a class="acc-dl-link" href="./VocalBridge-Windows.zip?v=20261022" download="VocalBridge-Windows.zip">⬇ VocalBridge-Windows.zip</a>
+          </div>
+        </div>
+      </details>
+
+      <details class="glass-acc">
+        <summary>Linux / Universal Installation</summary>
+        <div class="acc-body">
+          <div class="acc-option">
+            <div class="acc-option-title">Option A — Browser PWA (recommended)</div>
+            <p>Open <a href="https://haymayia.github.io/Data" target="_blank" rel="noopener">https://haymayia.github.io/Data</a> in Chrome / Edge → click the <strong>Install</strong> icon (➕) in the address bar to add VocalBridge to your desktop.</p>
+          </div>
+          <div class="acc-option">
+            <div class="acc-option-title">Option B — Local CLI / Node (hardware debugging)</div>
+            <p>Clone the repository and serve it locally:</p>
+            <div class="code-block">
+              <button class="copy-btn" type="button" onclick="copyCode(this)">COPY</button>
+              <pre>git clone https://github.com/HayMayia/Data.git
+cd Data
+npx http-server</pre>
+            </div>
+          </div>
+        </div>
+      </details>
 
     </div>
   </section>
@@ -914,8 +1059,77 @@ function applyUpdate() {
   sendUpdateNow();
 }
 
+// ========== DOWNLOADS: PLATFORM DETECTION, GUARDS, OVERRIDE ==========
+function detectPlatform() {
+  const ua = navigator.userAgent || '';
+  if (/android/i.test(ua)) return 'android';
+  if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+  if (/windows/i.test(ua) || /Win/.test(navigator.platform || '')) return 'windows';
+  if (/Mac/.test(navigator.platform || '')) return 'ios'; // macOS → recommend the web app
+  return 'other';
+}
+
+let dlShowAll = false;
+const PLATFORM_LABELS = { android: 'Android', ios: 'iOS / Web', windows: 'Windows' };
+
+function applyPlatformUI() {
+  const p = detectPlatform();
+  const detectedEl = document.getElementById('dlDetected');
+  if (p === 'other') {
+    if (detectedEl) detectedEl.textContent = 'Device detected: other — showing all downloads';
+    return;
+  }
+  if (detectedEl) detectedEl.textContent = 'Device detected: ' + PLATFORM_LABELS[p];
+  document.querySelectorAll('.dl-card[data-platform]').forEach(card => {
+    const match = card.dataset.platform === p;
+    card.classList.toggle('is-recommended', match);
+    card.classList.toggle('is-dimmed', !match);
+  });
+}
+
+function platformGuard(target) {
+  const mine = detectPlatform();
+  if (dlShowAll || mine === 'other' || target === mine) return true;
+  toast('This download is designed for ' + (PLATFORM_LABELS[target] || target) + ' — tap "Show all platform downloads" to override', 'warning');
+  return false;
+}
+
+function toggleShowAllPlatforms() {
+  dlShowAll = !dlShowAll;
+  document.body.classList.toggle('dl-show-all', dlShowAll);
+  const btn = document.getElementById('dlShowAllBtn');
+  if (btn) btn.textContent = dlShowAll ? 'Show recommended only' : 'Show all platform downloads';
+  toast(dlShowAll ? 'All platform downloads unlocked' : 'Showing the recommended download for your device', 'info');
+}
+
+document.querySelectorAll('a.dl-btn[data-platform]').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    if (!platformGuard(btn.dataset.platform)) e.preventDefault();
+  });
+});
+
+function copyCode(btn) {
+  const block = btn.closest('.code-block');
+  const text = block.querySelector('pre').textContent;
+  const done = () => toast('Copied to clipboard', 'success');
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); }
+    catch (err) { toast('Copy failed — please select the text manually', 'error'); }
+    ta.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(fallback);
+  } else fallback();
+}
+
 // ========== iOS INSTALL MODAL ==========
 function showIosModal() {
+  if (!platformGuard('ios')) return;
   document.getElementById('iosModal').style.display = 'flex';
   document.body.classList.add('modal-showing');
   addLog('iOS install instructions opened (Add to Home Screen)', 'info');
@@ -929,6 +1143,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  applyPlatformUI();
   addLog('VocalBridge v2.0 BLE dashboard loaded', 'info');
   addLog('Click "Connect to User Device" to pair via Web Bluetooth', 'info');
   addLog('Head ESP32 reachable via internet for updates', 'head');
