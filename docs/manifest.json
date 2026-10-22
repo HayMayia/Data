@@ -1,25 +1,28 @@
 {
-  "short_name": "VBridge",
-  "name": "VocalBridge",
-  "start_url": "/Data/",
+  "background_color": "#95a9b7",
+  "dir": "ltr",
   "display": "standalone",
-  "background_color": "#FAF5E3",
-  "theme_color": "#F09819",
-  "description": "VocalBridge — Speech Detection Dashboard",
+  "name": "VocalBridge",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "VCBR",
+  "start_url": "/",
+  "theme_color": "#627e91",
   "icons": [
     {
-      "src": "favicon.png?v=6",
+      "src": "https://haymayia.github.io/Data/favicon.png?v=6",
+      "type": "image/png",
       "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "favicon.png?v=6",
-      "sizes": "16x16",
-      "type": "image/png"
+      "isSquare": true,
+      "isPng": true,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 32,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
     }
   ],
-  "orientation": "portrait",
-  "scope": "/Data/",
-  "lang": "en",
-  "dir": "ltr"
+  "id": "/Data/",
+  "description": "EMG-controlled speech assistive system for real-time expression."
 }
